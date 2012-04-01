@@ -7,17 +7,19 @@ Backbone-SPF is a lightweight framework to help build single-page apps with Back
         globals: [
             // views you want to initialize for all screens
         ],
-        screen_one: {
-            layout: MyLayout,
-            slots: {
-                slot_one: MyViewOne,
-                slot_two: MyViewTwo
+        screens: {
+            screen_one: {
+                layout: MyLayout,
+                slots: {
+                    slot_one: MyViewOne,
+                    slot_two: MyViewTwo
+                },
+                router: ScreenOneRouter
             },
-            router: ScreenOneRouter
-        },
-        screen_two: {
-            view: MyScreenView,
-            router: ScreenTwoRouter
-        },
-        screen_three: MyScreenThreeView
+            screen_two: {
+                view: MyScreenView,
+                router: ScreenTwoRouter
+            },
+            screen_three: MyScreenThreeView
+        }
     });

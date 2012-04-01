@@ -73,11 +73,11 @@ var spf = (function(Backbone, window) {
                 this._stateHandlers = [];
             }
             state.on(event, handler, context);
-            this._stateHandlers.push({ event: event, handler: handler });
+            this._stateHandlers.push({ event: event, handler: handler, context: context });
         },
         unbindState: function() {
             (this._stateHandlers || []).forEach(function(h) {
-                state.off(h.event, h.handler);
+                state.off(h.event, h.handler, h.context);
             });
         },
         // basic clear support
