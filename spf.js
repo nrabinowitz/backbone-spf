@@ -8,19 +8,21 @@ var spf = (function(Backbone, window) {
         // default application settings
         config = spf.config = {
             appElement: 'body',
-            screens: {}
+            views: {},
+            
         },
-        screens,
         identity = _.identity,
         State, state,
-        View, AppView, 
-        Router, AppRouter;
+        View, Layout, AppView,
+        Router, AppRouter
+        viewCache = {};
         
     // --------------------------------
     // Application State
     // --------------------------------
     
     /**
+     * @name spf.State
      * @class
      * Model to hold application state.
      */
@@ -62,10 +64,11 @@ var spf = (function(Backbone, window) {
     // --------------------------------
     
     /**
+     * @name spf.View
      * @class
      * Extend the base view class with some useful features
      */
-    View = Backbone.View.extend({
+    View = spf.View = Backbone.View.extend({
         // bind/unbind state listeners
         bindState: function(event, handler, context) {
             // create handler array if necessary
@@ -85,39 +88,129 @@ var spf = (function(Backbone, window) {
             var view = this;
             view.$el.empty();
             view.unbindState();
-            view.unbindResize();
             view.undelegateEvents();
             return view;
+        }
+    });
+    
+    /**
+     * @name spf.Layout
+     * @class
+     * Layout for a full-screen view. In general, Layouts should be relatively static,
+     * with UI controls and complex view logic handled in the slot views.
+     * @extends spf.View
+     */
+    Layout = spf.Layout = View.extend({
+        
+        initialize: function() {
+            var view = this;
+            // bind state for refresh events
+            if (view.refreshOn) {
+                !_.isArray(view.refreshOn) && view.refreshOn = [view.refreshOn];
+                view.refreshOn.forEach(function(event) {
+                    view.bindState(event, view.refresh, view);
+                }
+            }
         },
-        // bind layout() to window resize
-        bindResize: function(f) {
+        
+        /**
+         * Clear this layout
+         */
+        clear: function() {
+            var view = this;
+            view.clearSlots();
+            view.unbindResize();
+            View.prototype.clear.call(view);
+        },
+        
+        /**
+         * Clear slot views
+         */
+        clearSlots: function() {
+            this.slots.forEach(function(slot) {
+                slot.clear();
+            });
+            this.slots = {};
+        },
+        
+        /**
+         * Refresh all slots
+         */
+        refresh: function() {
+            this.clearSlots();
+            this.updateSlots();
+        },
+        
+        /**
+         * Render view
+         */
+        render: function() {
+            this.layout();
+            this.bindResize();
+            this.updateSlots();
+            return this;
+        },
+        
+        /**
+         * Instantiate new slot views. If there's a DOM element in the
+         * layout with the same name as the slot key, the slot view
+         * will be appended to that element.
+         */
+        updateSlots: function() {
+            var view = this;
+            _(view.slotClasses).each(function(cls, key) {
+                // instatiate slots
+                var slot = view.slots[key] = new cls({ 
+                        parent: view
+                    }),
+                    el = view.$('#' + key)[0];
+                slot.render();
+                if (el) slot.$el.appendTo(el);
+            });
+        },
+        
+        /**
+         * Bind layout() to window resize
+         * @param {Function} [cb=layout]   Callback function (defaults to this.layout)
+         */
+        bindResize: function(cb) {
             // create handler array if necessary
             if (!this._resizeHandlers) {
                 this._resizeHandlers = [];
             }
             var view = this,
-                callback = f || function() { view.layout() },
+                callback = cb || function() { view.layout() },
                 handler = function() {
                     callback();
                 };
             view._resizeHandlers.push(handler);
             $(window).resize(handler);
         },
+        
+        /**
+         * Unbind all of this views handlers on window.resize
+         */
         unbindResize: function() {
             (this._resizeHandlers || []).forEach(function(h) {
                 $(window).unbind('resize', h);
             });
         },
-        // override in subclasses
-        layout: $.noop,
-        // common pattern support
-        bindingLayout: function() {
-            this.layout();
-            this.bindResize();
-        }
+        
+        /**
+         * Function to handle DOM layout (e.g. sizing elements to fit window).
+         * Defaults to a no-op; override in subclasses
+         */
+        layout: $.noop
+    
     });
     
+    // private factory to support shorthand string syntax
+    function layoutClassFactory(str) {
+        return Layout.extend({ el: str })
+    }
+    
     /**
+     * @name spf.AppView
      * @class
      * Primary view for the application
      */
@@ -125,45 +218,55 @@ var spf = (function(Backbone, window) {
         
         initialize: function() {
             // listen for state changes
-            state.bind('change:screen', this.updateScreen, this);
+            state.bind('change:view', this.updateView, this);
         },
         
-        getScreenClass: function(screen) {
-            var screenConfig = screens[screen];
-            return screenConfig && (
-                // is this a view?
-                (screenConfig.render && screenConfig.delegateEvents) ? screenConfig :
-                    // nope, a configuration object
-                    screenConfig.layout || screenConfig.view
-            );
-        },
-        
-        // update the top-level screen
-        updateScreen: function() {
-            var app = this,
-                screenKey = state.get('screen'),
-                screenKeys = _(screens).keys(),
-                screenClass = getScreenClass(screen),
-                oldKey = app.screenKey,
-                oldScreen = app.screenView,
-                screenView, fromRight;
-            if (screenClass && screenClass !== oldClass) {
-                // instantiate new screen - XXX: get from cache?
-                screenView = app.screenView = new screenClass({ parent: app });
-                app.screenKey = screenKey;
-                // work out left/right
-                fromRight = oldKey ? 
-                    screenKeys.indexOf(oldKey) < screenKeys.indexOf(screenKey) :
-                    true;
-                // close old screen
-                if (oldScreen) app.close(oldScreen, fromRight);
-                // open new screen
-                app.open(screenView, fromRight);
+        dropView: function(key) {
+            var view = viewCache[key];
+            if (view) {
+                view.clear().remove();
+                delete viewCache[key];
             }
         },
         
-        openScreen: function(view, fromRight) {
-            this.$el.append(view.el);
+        // update the top-level layout
+        updateView: function() {
+            var app = this,
+                viewKey = state.get('view'),
+                oldKey = app.viewKey,
+                oldView = app.currentView,
+                viewKeys, viewConfig,
+                view, viewClass, fromRight;
+            if (viewKey && viewKey !== oldKey) {
+                // look in cache
+                view = viewCache[viewKey];
+                if (!view) {
+                    // no cache - get view class from config and instantiate
+                    viewConfig = config.views[view];
+                    viewClass = viewConfig && viewConfig.layout;
+                    if (viewClass) {
+                        // instatiate and add to DOM
+                        view = viewCache[viewKey] = new viewClass({ parent: app });
+                        view.$el.hide().appendTo(app.el);
+                    } else {
+                        // this should only happen due to a coding error
+                        throw "No view class found for view " + viewKey;
+                    }
+                }
+                app.viewKey = viewKey;
+                // work out left/right
+                viewKeys = _(config.views).keys();
+                fromRight = oldKey ? 
+                    viewKeys.indexOf(oldKey) < viewKeys.indexOf(viewKey) :
+                    true;
+                // close old view
+                if (oldView) app.close(oldView, fromRight);
+                // open new view
+                app.open(view, fromRight);
+            }
+        },
+        
+        openView: function(view, fromRight) {
             view.$el.show(
                 'slide', 
                 {direction: (fromRight ? 'right' : 'left') }, 
@@ -171,25 +274,242 @@ var spf = (function(Backbone, window) {
             );
         },
         
-        closeScreen: function(view, fromRight) {
+        closeView: function(view, fromRight) {
             view.$el.hide(
                 'slide', 
                 { direction: (fromRight ? 'left' : 'right') }, 
-                500,
-                function() { view.clear().remove() }
+                500
             );
         }
     });
     
-    // XXX: Add Router and AppRouter
+    // --------------------------------
+    // Router classes
+    // --------------------------------
+    
+    /**
+     * @name spf.Router
+     * @class
+     * Core router
+     */
+    Router = spf.Router = Backbone.Router.extend({
+    
+        /**
+         * Get the route string for the current route
+         */
+        getRoute: function() {
+            // (override in subclasses)
+            return '';
+        },
+        
+        /**
+         * Update the url based on the current state
+         */
+        updateRoute: function() {
+            this.navigate(this.getRoute());
+        },
+        
+        /** 
+         * Update the url if this router is responsible for the current view
+         */
+        updateViewRoute: function() {
+            if (this.viewKey && this.viewKey == state.get('view')) {
+                this.updateRoute();
+            }
+        }
+        
+    });
+    
+    // private factory to support shorthand string syntax
+    function routerClassFactory(viewKey, routeStrings) {
+        // make routes
+        routeStrings = routeStrings ? 
+            (_.isArray(routeStrings) ? routeStrings : [routeStrings] :
+            [viewKey];
+        var routes = {},
+            stateParams = [],
+            namedParam = /:\w+/g;
+        routeStrings.forEach(function(s) {
+            // get state variables
+            var params = routes[s] = (s.match(namedParam) || [])
+                .map(function(s) { return s.substr(1) });
+            // add to listener list
+            stateParams = _.union(stateParams, params);
+        });
+        // make router
+        return Router.extend({
+        
+            initialize: function() {
+                var router = this;
+                // listen for state changes
+                stateParams.forEach(function(param) {
+                    state.on('change:' + param, router.updateViewRoute, router);
+                }
+                // set up routes
+                _(routes).each(function(params, r) {
+                    router.route(r, r, function() {
+                        var args = params.reduce(function(agg, p, i) {
+                            agg[p] = arguments[i];
+                            return agg;
+                        }, {});
+                        // update state parameters
+                        params.forEach(function(p) {
+                            state.setSerialized(p, args[p]);
+                        }
+                        // update view
+                        state.set({ view: viewKey });
+                    });
+                }
+            },
+            
+            getRoute: function() {
+                // get the route with the most non-null state vars
+                var route = _.sortBy(
+                    _(routes).map(function(params, r) {
+                        return { route: r, params: params }
+                    }).filter(function(e) {
+                        var params = e.params,
+                            i, val;
+                        // look for missing state vars, replacing on the way
+                        for (i=0; i<params.length; i++) {
+                            val = state.get(params[i]);
+                            // missing, don't include
+                            if (!val) return false;
+                            // otherwise, update the route
+                            e.route = e.route.replace(':' + params[i], val);
+                        } 
+                        return true;
+                    }),
+                    function(e) {
+                        return e.params.length
+                    }
+                ).pop();
+                return route && route.route;
+            }
+            
+        });
+    }
+    
+    /**
+     * @name spf.AppRouter
+     * @class
+     * Primary router for the application
+     */
+    AppRouter = spf.AppRouter = Router.extend({
+    
+        initialize: function() {
+            var router = this;
+            // factory for 
+            // instantiate registered routers
+            router.routers = {};
+            config.views.forEach(function(viewConfig) {
+                // find router class
+                var routerClass = 
+                r.router = new r.cls();
+            });
+            // set up history to catch querystrings
+            Backbone.history.getFragment = function() {
+                var fragment = Backbone.History.prototype.getFragment.apply(this, arguments),
+                    // intercept and get querystring
+                    parts = fragment.split('?'),
+                    qs = parts[1];
+                if (qs) {
+                    router.parseQS(qs);
+                }
+                return parts[0];
+            };
+            // listen for state changes
+            state.on('change:view', this.updateRoute, this);
+        },
+        
+        // get the router for the current top view
+        getRouter: function() {
+            var viewKey = state.get('view'),
+                router = routers[viewKey];
+            if (!router) throw "No router found for view " + viewKey;
+            return router;
+        },
+        
+        getRoute: function() {
+            // delegate
+            return this.getRouter().getRoute();
+        },
+        
+        navigate: function(route, options) {
+            // delegate
+            return this.getRouter().navigate(route, options);
+        },
+        
+        // set any global state variables from the querystring
+        parseQS: function(qs) {
+            qs.split('&').forEach(function(pair) {
+                var kv = pair.split('='),
+                    val = kv[1] ? decodeURIComponent(kv[1]) : null;
+                if (kv.length > 1) {
+                    state.setSerialized(kv[0], val);
+                }
+            });
+        },
+        
+        // encode a querystring from state parameters
+        getQS: function() {
+            var qs = (this.qsParams || []).map(function(key) {
+                    var value = state.get(key),
+                        fragment = '';
+                    if (value) {
+                        fragment = key + '=' + encodeURI(state.serialize(key, value));
+                    }
+                    return fragment;
+                }).filter(_.identity).join('&');
+            return qs ? '?' + qs : '';
+        },
+        
+        // the full link, with querystring in state
+        getPermalink: function() {
+            var href = window.location.href.split('?')[0];
+            return href + this.getQS();
+        }
 
+    });
+    
+    // --------------------------------
+    // Module methods
+    // --------------------------------
 
-    spf.createApp = function(options) {
-        _extend(config, options);
-        screens = config.screens;
+    /**
+     * @name spf.config
+     * Configure the application
+     * @param {Object} options      Config object
+     */
+    spf.config = function(options) {
+        _.extend(config, options);
+        // support shortcuts for static view layouts and state-based routers
+        config.views.forEach(function(viewConfig, k) {
+            // whole config is a view or a string - set up object
+            if (viewConfig.prototype instanceof Backbone.View || _.isString(viewConfig))
+                viewConfig = config.views[k] = { layout: viewConfig };
+            // layout is a string - create view with factory
+            if (_.isString(viewConfig.layout))
+                viewConfig.layout = layoutClassFactory(viewConfig);
+            // set slots and refresh
+            viewConfig.layout = viewConfig.layout.extend({ 
+                slots: viewConfig.layout.prototype.slots || viewConfig.slots,
+                refreshOn: viewConfig.refreshOn
+            });
+            // no router - default to single route based on key
+            if (!viewConfig.router)
+                viewConfig.router = k;
+            // router is a string or an array - create router with factory
+            if (_.isString(viewConfig.router) || _.isArray(viewConfig.router))
+                viewConfig.router = routerClassFactory(k, viewConfig.router);
+        });
         return spf;
     };
     
+    /**
+     * @name spf.start
+     * Start the application. Instantiates core objects and starts Backbone.history.
+     */
     spf.start = function() {
         spf.router = new AppRouter();
         spf.app = new AppView({
