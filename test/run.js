@@ -1,7 +1,7 @@
 // Tests require PhantomJS and Casper.js
 
 var casper = require('casper').create({
-        viewportSize: {width: 800, height: 600}
+        verbose: true
     }),
     t = casper.test,
     baseUrl = casper.baseUrl = "http://localhost:8080/app.html";
@@ -60,6 +60,24 @@ t.assertRoute = function(expected, message) {
     } else {
         t.assertEvalEquals(getHash, expected, message);
     }
+};
+
+// app-specific tests
+
+t.assertState = function(property, expected, message) {
+    f = new Function("return spf.state.get('" + property + "')");
+    t.assertEvalEquals(f, expected, 
+        'State property "' + property + '" is set to ' + expected);
+};
+
+t.assertAtRoute = function(el, state, route) {
+    t.assertVisible(el,
+        'Element "' + el + '" is visible');
+    t.assertState('view', state);
+    t.assertEvalEquals(function() { return spf.router.getRoute() }, route,
+        'Router returns ' + route);
+    t.assertRoute(route,
+        'Route is set to ' + route);
 };
 
 // set up and run suites

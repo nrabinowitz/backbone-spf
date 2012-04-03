@@ -14,7 +14,7 @@
         identity = _.identity,
         State, state,
         View, Layout, AppView,
-        Router, AppRouter
+        Router, StateRouter, AppRouter,
         viewCache = {},
         routerCache = {};
         
@@ -208,11 +208,6 @@
     
     });
     
-    // private factory to support shorthand string syntax
-    function layoutClassFactory(str) {
-        return Layout.extend({ el: str })
-    }
-    
     /**
      * @name spf.AppView
      * @class
@@ -322,75 +317,81 @@
         
     });
     
-    // private factory to support shorthand string syntax
-    function routerClassFactory(viewKey, routeStrings) {
-        // make routes
-        routeStrings = routeStrings ? 
-            (_.isArray(routeStrings) ? routeStrings : [routeStrings]) :
-            [viewKey];
-        var routes = {},
-            stateParams = [],
-            namedParam = /:\w+/g;
-        routeStrings.forEach(function(s) {
-            // get state variables
-            var params = routes[s] = (s.match(namedParam) || [])
-                .map(function(s) { return s.substr(1) });
-            // add to listener list
-            stateParams = _.union(stateParams, params);
-        });
-        // make router
-        return Router.extend({
+    /**
+     * @name spf.StateRouter
+     * @class
+     * Router class that supports a simple syntax for routes that update state
+     */
+    StateRouter = spf.StateRouter = Router.extend({
         
-            initialize: function() {
-                var router = this;
-                // listen for state changes
-                stateParams.forEach(function(param) {
-                    state.on('change:' + param, router.updateViewRoute, router);
-                });
-                // set up routes
-                _(routes).each(function(params, r) {
-                    router.route(r, r, function() {
-                        var args = params.reduce(function(agg, p, i) {
-                            agg[p] = arguments[i];
-                            return agg;
-                        }, {});
-                        // update state parameters
-                        params.forEach(function(p) {
-                            state.setSerialized(p, args[p]);
+        initialize: function() {
+            var router = this,
+                viewKey = router.viewKey,
+                routeStrings = router.routeStrings,
+                stateParams = [],
+                // look for routes in options, or default to view key
+                routeEntries =  router.routeEntries = (routeStrings ? 
+                    (_.isArray(routeStrings) ? routeStrings : [routeStrings]) : [viewKey])
+                        .map(function(r) {
+                            // get state variables
+                            var params = (r.match(/:\w+/g) || [])
+                                .map(function(s) { return s.substr(1) });
+                            // add to listener list
+                            stateParams = _.union(stateParams, params);
+                            // return entry object
+                            return { route: r, params: params }
                         });
-                        // update view
-                        state.set({ view: viewKey });
+            // set up routes
+            _(routeEntries).each(function(e) {
+                var r = e.route,
+                    params = e.params;
+                // add route
+                router.route(r, r, function() {
+                    var args = Array.prototype.slice.call(arguments);
+                    args = params.reduce(function(agg, p, i) {
+                        agg[p] = args[i];
+                        return agg;
+                    }, {});
+                    // update state parameters
+                    params.forEach(function(p) {
+                        state.setSerialized(p, args[p]);
                     });
+                    // update view
+                    state.set({ view: viewKey });
                 });
-            },
-            
-            getRoute: function() {
-                // get the route with the most non-null state vars
-                var route = _.sortBy(
-                    _(routes).map(function(params, r) {
-                        return { route: r, params: params }
-                    }).filter(function(e) {
+            });
+            // listen for state changes
+            stateParams.forEach(function(param) {
+                state.on('change:' + param, router.updateViewRoute, router);
+            });
+        },
+        
+        getRoute: function() {
+            // get the route with the most non-null state vars
+            var route = _.sortBy(
+                _(this.routeEntries)
+                    .filter(function(e) {
                         var params = e.params,
                             i, val;
+                        e.rendered = e.route;
                         // look for missing state vars, replacing on the way
                         for (i=0; i<params.length; i++) {
                             val = state.get(params[i]);
                             // missing, don't include
                             if (!val) return false;
                             // otherwise, update the route
-                            e.route = e.route.replace(':' + params[i], val);
+                            e.rendered = e.rendered.replace(':' + params[i], val);
                         } 
                         return true;
                     }),
-                    function(e) {
-                        return e.params.length
-                    }
-                ).pop();
-                return route && route.route;
-            }
-            
-        });
-    }
+                function(e) {
+                    return e.params.length
+                }
+            ).pop();
+            return route && route.rendered;
+        }
+        
+    });
     
     /**
      * @name spf.AppRouter
@@ -488,7 +489,9 @@
                 viewConfig = config.views[k] = { layout: viewConfig };
             // layout is a string - create view with factory
             if (_.isString(viewConfig.layout))
-                viewConfig.layout = layoutClassFactory(viewConfig.layout);
+                viewConfig.layout = Layout.extend({ 
+                    el: viewConfig.layout 
+                });
             // set slots and refresh
             viewConfig.layout = viewConfig.layout.extend({ 
                 slotClasses: viewConfig.layout.prototype.slotClasses || viewConfig.slots,
@@ -499,7 +502,10 @@
                 viewConfig.router = k;
             // router is a string or an array - create router with factory
             if (_.isString(viewConfig.router) || _.isArray(viewConfig.router))
-                viewConfig.router = routerClassFactory(k, viewConfig.router);
+                viewConfig.router = StateRouter.extend({ 
+                    viewKey: k, 
+                    routeStrings: viewConfig.router
+                });
         });
         return spf;
     };
