@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<project name="backbone-spf" default="build-dev">
+
+    <property file="build.properties" />
+    
+    <property name="lib.file" value="spf.js" />
+    <property name="test.dir" value="test" />
+    <property name="test.app.dir" value="${test.dir}/app" />
+    <property name="test.lib.file" value="${test.app.dir}/${lib.file}" />
+
+    <target name="build-test">
+        <copy file="${lib.file}" tofile="${test.lib.file}" />
+    </target>
+    
+    <target name="clean-test">
+        <delete file="${test.lib.file}" />
+    </target>
+    
+    <!-- Server targets -->
+    
+    <target name="start-test-server">
+        <exec executable="cmd.exe">
+            <arg line="/K start node ${devserver.js} -s ${test.server.port} -r ${test.app.dir}" />
+        </exec>
+    </target>
+    
+    <target name="launch-in-browser">
+        <exec executable="cmd.exe">
+            <arg line="/K start http://localhost:${test.server.port}/app.html" />
+        </exec>
+    </target>
+    
+    <target name="serve-test"
+            depends="build-test,
+                     start-test-server,
+                     launch-in-browser" />
+    
+    <!-- Test targets -->
+    
+    <target name="run-tests" depends="build-test, start-test-server">
+        <echo>Running tests</echo>
+        <property name="suite" value="test/suites"/>
+        <exec executable="python" failonerror="true">
+            <arg file="${casper.js}" />
+            <arg file="test/run.js" />
+            <arg file="${suite}" />
+        </exec>
+    </target>
+    
+</project>

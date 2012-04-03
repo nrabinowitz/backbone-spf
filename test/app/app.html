@@ -1,0 +1,50 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Backbone SPF Test</title>
+  <script type="text/javascript" src="vendor/jquery-1.7.1.min.js"></script>
+  <script type="text/javascript" src="vendor/underscore-min.js"></script>
+  <script type="text/javascript" src="vendor/backbone-min.js"></script>
+  <script type="text/javascript" src="spf.js"></script>
+  <script type="text/javascript" src="views.js"></script>
+  <style>
+    body {
+    }
+    div.layout {
+        position: absolute;
+        top: 3em;
+        left: 3em;
+        right: 3em;
+        bottom: 3em;
+        background: #ddd;
+        display: none;
+    }
+    div.slot {
+        margin: 1em;
+        padding: 1em;
+        background: #aaa;
+    }
+  </style>
+  
+<script>
+$();
+</script>
+</head>
+<body>
+    <div id="test1">Test</div>
+    <div id="test2">Test</div>
+    <div id="layout_1" class="layout">
+        <h1>Layout 1</h1>
+        <div id="slot_1_1" class="slot"></div>
+        <div id="slot_1_2" class="slot"></div>
+    </div>
+    
+    <div id="layout_2" class="layout">
+        <h1>Layout 2</h1>
+        <div id="slot_2_1" class="slot"></div>
+        <div id="slot_2_2" class="slot"></div>
+        <div id="slot_2_3" class="slot"></div>
+    </div>
+
+</body>
+</html>
