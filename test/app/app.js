@@ -32,13 +32,11 @@ var GlobalTest2 = Backbone.View.extend({
 });
 
 var state = spf.state;
-        console.log('here');
 
 var CustomRouter = spf.Router.extend({
 
-    name: 'CustomRouter',
-
     initialize: function() {
+        console.log('initialized');
         // listen for state changes
         state.on('change:param1',this.updateViewRoute, this);
         state.on('change:param2',this.updateViewRoute, this);
@@ -77,10 +75,10 @@ var CustomRouter = spf.Router.extend({
         var action = state.get('action'),
             param1 = state.get('param1'),
             param2 = state.get('param2');
-        return 'custom'; /*('custom' + (action ? '/' + action : '') + 
+        return ('custom' + (action ? '/' + action : '') + 
             ((action == 'action1' && param1) ? '/' + param1 :
                 (action == 'action2' && param2) ? '/' + param2 :
-                ''));*/
+                ''));
     }
 
 });

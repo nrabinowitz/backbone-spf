@@ -2,6 +2,7 @@
 
 var casper = require('casper').create({
         verbose: true
+        // logLevel: 'debug'
     }),
     t = casper.test,
     baseUrl = casper.baseUrl = "http://localhost:8080/app.html";

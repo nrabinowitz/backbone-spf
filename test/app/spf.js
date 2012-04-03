@@ -402,6 +402,7 @@
     
         initialize: function() {
             var router = this;
+            router.cache = routerCache;
             // instantiate routers
             _(config.views).each(function(viewConfig, k) {
                 routerCache[k] = new viewConfig.router();
@@ -498,6 +499,7 @@
                 refreshOn: viewConfig.refreshOn
             });
             // no router - default to single route based on key
+            console.log(viewConfig.router);
             if (!viewConfig.router)
                 viewConfig.router = k;
             // router is a string or an array - create router with factory
