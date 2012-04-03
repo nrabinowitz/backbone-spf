@@ -24,10 +24,10 @@ Backbone-SPF is a lightweight framework to help build single-page apps with Back
             view_three: MyViewThree, // one view, no sub-routes
             view_four: {
                 layout: '#layout_four', // shorthand for Layout.extend({ el: ... })
-                router: ['view_four', 'view_four/:model_id'], // shorthand for state-based router
+                router: ['view_four', 'view_four/:modelid'], // shorthand for state-based router
                 slots: { ... }
             },
-            view_five: 'templates/layout_five.html'
+            view_five: '#layout_five' // shorthand for Layout.extend({ el: ... })
         }
     });
     
