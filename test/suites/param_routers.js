@@ -2,9 +2,45 @@ var t = casper.test,
     baseUrl = casper.baseUrl;
     
 casper.start();
+
+casper
+    .describe("Parameterized string-based routers > Single, shallow")
+    .setup('#foo/1', function() {
+        spf.configure({
+            views: {
+                foo: {
+                    layout: '#layout_1',
+                    router: 'foo/:param1'
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo/1');
+        t.assertState('param1', '1');
+    });
     
 casper
-    .describe("Parameterized string-based routers")
+    .describe("Parameterized string-based routers > Single, deep")
+    .setup('#foo/1/2/3', function() {
+        spf.configure({
+            views: {
+                foo: {
+                    layout: '#layout_1',
+                    router: 'foo/:param1/:param2/:param3'
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo/1/2/3');
+        t.assertState('param1', '1');
+        t.assertState('param2', '2');
+        t.assertState('param3', '3');
+    });
+
+casper
+    .describe("Parameterized string-based routers > Multiple")
     .setup('', function() {
         spf.configure({
             views: {

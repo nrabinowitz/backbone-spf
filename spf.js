@@ -11,6 +11,9 @@
             views: {},
             
         },
+        ensureArray = function(a) {
+            return !a ? [] : _.isArray(a) ? a : [a]
+        },
         identity = _.identity,
         State, state,
         View, Layout, AppView,
@@ -110,8 +113,7 @@
             view.slots = {};
             // bind state for refresh events
             if (refreshOn) {
-                refreshOn = _.isArray(refreshOn) ? refreshOn : [refreshOn];
-                view.refreshOn.forEach(function(event) {
+                ensureArray(refreshOn).forEach(function(event) {
                     view.bindState(event, view.refresh, view);
                 });
             }
@@ -131,7 +133,7 @@
          * Clear slot views
          */
         clearSlots: function() {
-            this.slots.forEach(function(slot) {
+            _(this.slots).each(function(slot) {
                 slot.clear();
             });
             this.slots = {};
@@ -330,8 +332,7 @@
                 routeStrings = router.routeStrings,
                 stateParams = [],
                 // look for routes in options, or default to view key
-                routeEntries =  router.routeEntries = (routeStrings ? 
-                    (_.isArray(routeStrings) ? routeStrings : [routeStrings]) : [viewKey])
+                routeEntries =  router.routeEntries = ensureArray(routeStrings || viewKey)
                         .map(function(r) {
                             // get state variables
                             var params = (r.match(/:\w+/g) || [])

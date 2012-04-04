@@ -1,12 +1,19 @@
 var ViewOne = spf.View.extend({
     render: function() {
-        this.$el.html('ViewOne')
+        this.$el.html('<h2>ViewOne</h2><span>' + this.cid + '</span>')
+    },
+    events: {
+        'click h2': 'increment'
+    },
+    increment: function() {
+        window._counter = window._counter || 0;
+        window._counter++;
     }
 });
 
 var ViewTwo = spf.View.extend({
     render: function() {
-        this.$el.html('ViewTwo')
+        this.$el.html('<h2>ViewTwo</h2><span>' + this.cid + '</span>')
     }
 });
 
@@ -36,7 +43,6 @@ var state = spf.state;
 var CustomRouter = spf.Router.extend({
 
     initialize: function() {
-        console.log('initialized');
         // listen for state changes
         state.on('change:param1',this.updateViewRoute, this);
         state.on('change:param2',this.updateViewRoute, this);

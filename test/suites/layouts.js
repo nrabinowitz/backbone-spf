@@ -68,18 +68,18 @@ casper
     .then(function() {
         t.assertVisible('#layout_1',
             'Layout 1 is visible');
-        t.assertText('#slot_1_1', 'ViewOne',
+        t.assertText('#slot_1_1 h2', 'ViewOne',
             'ViewOne slot initialized');
-        t.assertText('#slot_1_2', 'ViewTwo',
+        t.assertText('#slot_1_2 h2', 'ViewTwo',
             'ViewTwo slot initialized');
     })
     .thenOpen(baseUrl + '#bar')
     .then(function() {
         t.assertVisible('#layout_2',
             'Layout 2 is visible');
-        t.assertText('#slot_2_1', 'ViewOne',
+        t.assertText('#slot_2_1 h2', 'ViewOne',
             'ViewOne slot initialized');
-        t.assertText('#slot_2_2', 'ViewTwo',
+        t.assertText('#slot_2_2 h2', 'ViewTwo',
             'ViewTwo slot initialized');
     });
 

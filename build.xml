@@ -9,7 +9,7 @@
     <property name="test.lib.file" value="${test.app.dir}/${lib.file}" />
 
     <target name="build-test">
-        <copy file="${lib.file}" tofile="${test.lib.file}" />
+        <copy file="${lib.file}" tofile="${test.lib.file}" overwrite="true" />
     </target>
     
     <target name="clean-test">
