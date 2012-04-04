@@ -31,7 +31,7 @@ casper
     })
     .then(function() {
         // a bit of a hack, as parseInt drops the letters
-        this.evaluate(function() { spf.state.setSerialized('param2', '1aaa') });
+        this.evaluate(function() { spf.state.set('param2', '1aaa') });
         t.assertState('param2', 1,
             'Deserialization correct for param2');
         t.assertMatch(this.evaluate(function() { return spf.router.getPermalink() }), /param2=1/,

@@ -14,10 +14,16 @@
         ensureArray = function(a) {
             return a===undefined ? [] : _.isArray(a) ? a : [a]
         },
+        elementInDom = function(el) { 
+            while (el = el.parentNode) if (el === document) return true; 
+            return false; 
+        },
         identity = _.identity,
         viewCache = {},
         routerCache = {},
         qsParams = [],
+        BackboneView = Backbone.View,
+        BackboneModel = Backbone.Model,
         State, state,
         View, Layout, AppView,
         Router, StateRouter, AppRouter;
@@ -31,7 +37,7 @@
      * @class
      * Model to hold application state.
      */
-    State = spf.State = Backbone.Model.extend({
+    State = spf.State = BackboneModel.extend({
         initialize: function() {
             this.params = {};
         },
@@ -46,11 +52,31 @@
                 f = params[key] && params[key].serialize || identity;
             return f(value);
         },
-        // convenience function to set a serialized value
-        setSerialized: function(key, value) {
-            o = {};
-            o[key] = this.deserialize(key, value);
-            this.set(o);
+        // set a serialized value
+        setSerialized: function(key, value, options) {
+            this.set(key, this.deserialize(key, value), options);
+        },
+        // get a serialized value
+        getSerialized: function(key) {
+            return this.serialize(key, this.get(key));
+        },
+        // override set() to deserialize if required
+        set: function(key, value, options) {
+            var state = this,
+                attrs;
+            // support both (key, value) and ({key:value})
+            if (_.isObject(key)) {
+                attrs = key;
+                options = value;
+            } else {
+                attrs = {};
+                attrs[key] = value;
+            }
+            // try to deserialize any strings
+            _(attrs).each(function(v, k) {
+                if (_.isString(v)) attrs[k] = state.deserialize(k, v);
+            });
+            BackboneModel.prototype.set.call(state, attrs, options);
         },
         // add de/serializable state parameters
         addParam: function(key, deserialize, serialize) {
@@ -73,7 +99,12 @@
      * @class
      * Extend the base view class with some useful features
      */
-    View = spf.View = Backbone.View.extend({
+    View = spf.View = BackboneView.extend({
+        // flag whether or not the element exists in the DOM on initialization
+        _ensureElement: function() {
+            BackboneView.prototype._ensureElement.call(this);
+            this.inDom = elementInDom(this.el);
+        },
         // bind/unbind state listeners
         bindState: function(event, handler, context) {
             // create handler array if necessary
@@ -91,11 +122,17 @@
         // basic clear support
         clear: function() {
             var view = this;
-            view.$el.empty();
+            // empty, remove, or don't touch DOM
+            if (view.inDom) {
+                if (view.clearDom) view.$el.empty();
+            }
+            else view.remove();
             view.unbindState();
             view.undelegateEvents();
             return view;
-        }
+        },
+        // set to false in subclasses to leave the DOM alone
+        clearDom: true
     });
     
     /**
@@ -127,7 +164,8 @@
             var view = this;
             view.clearSlots();
             view.unbindResize();
-            View.prototype.clear.call(view);
+            view.unbindState();
+            view.undelegateEvents();
         },
         
         /**
@@ -169,10 +207,9 @@
                 // instatiate slots
                 var slot = view.slots[key] = new cls({ 
                         parent: view
-                    }),
-                    el = view.$(key)[0];
+                    });
                 slot.render();
-                if (el) slot.$el.appendTo(el);
+                if (!slot.inDom) slot.$el.appendTo(view.$(key));
             });
         },
         
@@ -216,7 +253,7 @@
      * @class
      * Primary view for the application
      */
-    AppView = spf.AppView = Backbone.View.extend({
+    AppView = spf.AppView = BackboneView.extend({
         
         initialize: function() {
             var app = this;
@@ -232,7 +269,7 @@
         dropView: function(key) {
             var view = viewCache[key];
             if (view) {
-                view.clear().remove();
+                view.clear();
                 delete viewCache[key];
             }
         },
@@ -456,10 +493,10 @@
         // encode a querystring from state parameters
         getQS: function() {
             var qs = qsParams.map(function(key) {
-                    var value = state.get(key),
+                    var value = state.getSerialized(key),
                         fragment = '';
                     if (value) {
-                        fragment = key + '=' + encodeURI(state.serialize(key, value));
+                        fragment = key + '=' + encodeURI(value);
                     }
                     return fragment;
                 }).filter(_.identity).join('&');
@@ -488,7 +525,7 @@
         // support shortcuts for static view layouts and state-based routers
         _(config.views).each(function(viewConfig, k) {
             // whole config is a view or a string - set up object
-            if (viewConfig.prototype instanceof Backbone.View || _.isString(viewConfig))
+            if (viewConfig.prototype instanceof BackboneView || _.isString(viewConfig))
                 viewConfig = config.views[k] = { layout: viewConfig };
             // layout is a string - create view with factory
             if (_.isString(viewConfig.layout))

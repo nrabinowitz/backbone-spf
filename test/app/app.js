@@ -1,4 +1,7 @@
+var state = spf.state;
+
 var ViewOne = spf.View.extend({
+    className: 'view_one',
     render: function() {
         this.$el.html('<h2>ViewOne</h2><span>' + this.cid + '</span>')
     },
@@ -12,8 +15,26 @@ var ViewOne = spf.View.extend({
 });
 
 var ViewTwo = spf.View.extend({
+    className: 'view_two',
     render: function() {
         this.$el.html('<h2>ViewTwo</h2><span>' + this.cid + '</span>')
+    }
+});
+
+var AttachingViewOne = spf.View.extend({
+    el: '#slot_1_2',
+    render: function() {
+        this.$el.html('<h2>AttachingViewOne</h2><span>' + this.cid + '</span>')
+    }
+});
+var AttachingViewTwo = spf.View.extend({
+    el: '#slot_1_3',
+    clearDom: false,
+    events: {
+        'click span': 'setParam'
+    },
+    setParam: function() {
+        state.set('test', 'foobar');
     }
 });
 
@@ -37,8 +58,6 @@ var GlobalTest2 = Backbone.View.extend({
         this.$el.html('GlobalTest2');
     }
 });
-
-var state = spf.state;
 
 var CustomRouter = spf.Router.extend({
 

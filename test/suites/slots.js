@@ -130,6 +130,58 @@ casper
             'Counter has only been incremented once');
     });
     
+casper
+    .describe("Slot refresh > Element removal")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                foo: { 
+                    layout: '#layout_1',
+                    slots: {
+                        '#slot_1_1': ViewOne,
+                        '#slot_1_2': AttachingViewOne,
+                        '#slot_1_3': AttachingViewTwo
+                    }
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo');
+        t.assertText('#slot_1_1 h2', 'ViewOne',
+            'ViewOne slot rendered');
+        t.assertExists('#slot_1_1 div.view_one',
+            'ViewOne created a div element');
+        t.assertText('#slot_1_2 h2', 'AttachingViewOne',
+            'AttachingViewOne slot rendered');
+        t.assertDoesNotExist('#slot_1_2 div',
+            'AttachingViewOne used the slot element');
+        t.assertDoesNotExist('#slot_1_3 div',
+            'AttachingViewTwo used the slot element');
+        t.assertExists('#slot_1_3 span',
+            'AttachingViewTwo did not replace the DOM');
+        this.click('#slot_1_3 span');
+        t.assertState('test', 'foobar',
+            'AttachingViewTwo handled slot event');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.app.currentView.clear() });
+        t.assertExists('#slot_1_1',
+            'Slot 1 still there');
+        t.assertExists('#slot_1_2',
+            'Slot 2 still there');
+        t.assertEvalEquals(function() { return $('#slot_1_1').html() }, '',
+            'Slot 1 is empty');
+        t.assertEvalEquals(function() { return $('#slot_1_2').html() }, '',
+            'Slot 2 is empty');
+        t.assertExists('#slot_1_3 span',
+            'Slot 3 still has its elements');
+        this.evaluate(function() { spf.state.set('test', 'baz') });
+        this.click('#slot_1_3 span');
+        t.assertState('test', 'baz',
+            'AttachingViewTwo was unbound from slot event');
+    });
+    
 casper.run(function() {
     t.done();
 });
