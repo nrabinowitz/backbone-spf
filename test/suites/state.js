@@ -13,8 +13,7 @@ casper
             deserialize: function(s) { 
                 return s.split(',').map(function(i) { return parseInt(i) }) 
             },
-            serialize: function(a) { return a.join(',') },
-            defaultValue: [0,0]
+            serialize: function(a) { return a ? a.join(',') : '' }
         });
         spf.configure({
             views: {
@@ -24,12 +23,6 @@ casper
     })
     .then(function() {
         t.assertAtRoute('#layout_1', 'foo', 'foo');
-        t.assertEvalEquals(function() { return JSON.stringify(spf.state.get('param3')) }, '[0,0]',
-            'Default set for param3');
-        t.assertEvalEquals(function() { return spf.router.getPermalink() }, baseUrl + '#foo?param3=0,0',
-            'Permalink set correctly with param3');
-    })
-    .then(function() {
         // a bit of a hack, as parseInt drops the letters
         this.evaluate(function() { spf.state.set('param2', '1aaa') });
         t.assertState('param2', 1,
@@ -60,6 +53,48 @@ casper
         t.assertMatch(this.evaluate(function() { return spf.router.getPermalink() }), /param2=2/,
             'Permalink set correctly with param2');
         t.assertMatch(this.evaluate(function() { return spf.router.getPermalink() }), /param3=1,1/,
+            'Permalink set correctly with param3');
+    });
+    
+casper
+    .describe("Custom state class")
+    .setup('#foo', function() {
+        // set up params
+        spf.addParameter('param3', {
+            deserialize: function(s) { 
+                return s.split(',').map(function(i) { return parseInt(i) }) 
+            },
+            serialize: function(a) { return a ? a.join(',') : '' }
+        });
+        // override state with a custom class
+        spf.State = spf.State.extend({
+            defaults: {
+                param1: "test",
+                param3: [0,0]
+            }
+        });
+        spf.resetState();
+        // kick off
+        spf.configure({
+            views: {
+                foo: '#layout_1'
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo');
+        t.assertState('param1', 'test',
+            'Custom state class defaults used');
+        t.assertEvalEquals(function() { return JSON.stringify(spf.state.get('param3')) }, '[0,0]',
+            'Default set for param3');
+        t.assertEvalEquals(function() { return spf.router.getPermalink() }, baseUrl + '#foo?param3=0,0',
+            'Permalink set correctly with param3');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.state.set('param3', '3,3') });
+        t.assertEvalEquals(function() { return JSON.stringify(spf.state.get('param3')) }, '[3,3]',
+            'Deserialization correct for param3');
+        t.assertEvalEquals(function() { return spf.router.getPermalink() }, baseUrl + '#foo?param3=3,3',
             'Permalink set correctly with param3');
     });
     

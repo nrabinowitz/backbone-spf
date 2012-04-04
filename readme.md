@@ -12,8 +12,8 @@ Backbone-SPF is a lightweight framework to help build single-page apps with Back
                 layout: MyLayout, // layout view with slots
                 refreshOn: 'change:modelid', // state event requiring slot refresh
                 slots: {
-                    slot_one: MySlotViewOne,
-                    slot_two: MySlotViewTwo
+                    '#slot_one': MySlotViewOne,
+                    '#slot_two': MySlotViewTwo
                 },
                 router: 'view_one/:modelid' // shorthand for state-based router
             },
@@ -34,4 +34,3 @@ Backbone-SPF is a lightweight framework to help build single-page apps with Back
  * Projects can extend spf to pull the functionality into their own namespace
  * It's easy to subclass the library's classes to add or override functionality
  * Full-screen layout views are cached on creation. It's assumed that their content is already in the DOM.
- * Layouts should specify what state changes require a slot refresh

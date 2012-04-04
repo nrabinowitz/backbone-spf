@@ -21,7 +21,7 @@
         identity = _.identity,
         viewCache = {},
         routerCache = {},
-        qsParams = [],
+        stateParams = {},
         BackboneView = Backbone.View,
         BackboneModel = Backbone.Model,
         State, state,
@@ -38,18 +38,13 @@
      * Model to hold application state.
      */
     State = spf.State = BackboneModel.extend({
-        initialize: function() {
-            this.params = {};
-        },
         // (de)serialization functions
         deserialize: function(key, value) {
-            var params = this.params,
-                f = params[key] && params[key].deserialize || identity;
+            var f = stateParams[key] && stateParams[key].deserialize || identity;
             return f(value);
         },
         serialize: function(key, value) {
-            var params = this.params,
-                f = params[key] && params[key].serialize || identity;
+            var f = stateParams[key] && stateParams[key].serialize || identity;
             return f(value);
         },
         // set a serialized value
@@ -77,17 +72,10 @@
                 if (_.isString(v)) attrs[k] = state.deserialize(k, v);
             });
             BackboneModel.prototype.set.call(state, attrs, options);
-        },
-        // add de/serializable state parameters
-        addParam: function(key, deserialize, serialize) {
-            this.params[key] = {
-                deserialize: deserialize || identity,
-                serialize: serialize || identity
-            }
         }
     });
     
-    // initialize the singleton
+    // initialize singleton
     state = spf.state = new State();
     
     // --------------------------------
@@ -492,14 +480,14 @@
         
         // encode a querystring from state parameters
         getQS: function() {
-            var qs = qsParams.map(function(key) {
+            var qs = _.keys(stateParams).map(function(key) {
                     var value = state.getSerialized(key),
                         fragment = '';
                     if (value) {
                         fragment = key + '=' + encodeURI(value);
                     }
                     return fragment;
-                }).filter(_.identity).join('&');
+                }).filter(identity).join('&');
             return qs ? '?' + qs : '';
         },
         
@@ -554,24 +542,31 @@
      * @name spf.addParameter
      * Define a state parameter. While any state setting can simply be .set()
      * on the state model, defining a setting as a parameter allows it to be serialized 
-     * and deserialized from the querystring, and allows you to provide default values. 
-     * This is most appropriate for application state settings that would not otherwise be
-     * handled in a route.
+     * and deserialized from the querystring. This is most appropriate for application 
+     * state settings that would not otherwise be handled in a route.
+     *
      * @param {String} name         Name of the parameter. This will be used as the
      *                              attribute in the state model and as the querystring
      *                              parameter name.
      * @param {Object} [options]    Optional settings:
      * @param {Function} [options.deserialize]  Function to deserialize value from a string
      * @param {Function} [options.serialize]    Function to serialize value to a string
-     * @param {mixed} [options.defaultValue]    Default value for the parameter
      */
     spf.addParameter = function(name, options) {
-        // add to querystring parameters
-        qsParams.push(name);
-        if (options) {
-            state.addParam(name, options.deserialize, options.serialize);
-            if (options.defaultValue) state.set(name, options.defaultValue);
-        }
+        stateParams[name] = _.extend({
+            serialize: identity,
+            deserialize: identity
+        }, options);
+    };
+    
+    /**
+     * @name spf.resetState
+     * Reset the application state. Because the state object is initialized when the library
+     * is loaded, if you want to extend the State class, you'll need to set spf.State to your 
+     * new class, then call this function to reset.
+     */
+    spf.resetState = function() {
+        state = spf.state = new spf.State();
     };
     
     /**
@@ -580,10 +575,12 @@
      * @param {object} [options]    Options to pass to Backbone.history.start()
      */
     spf.start = function(options) {
+        // initialize the core objects
         spf.router = new AppRouter();
         spf.app = new AppView({
             el: config.appElement
         });
+        // start the router machinery
         Backbone.history.start(options);
     }
     
