@@ -516,9 +516,9 @@
     /**
      * @name spf.addParameter
      * Define a state parameter. While any state setting can simply be .set()
-     * on the state model, defining a setting as a parameter allows it to be set 
-     * in the querystring, and allows you to provide default values. This is most
-     * appropriate for application state settings that would not otherwise be
+     * on the state model, defining a setting as a parameter allows it to be serialized 
+     * and deserialized from the querystring, and allows you to provide default values. 
+     * This is most appropriate for application state settings that would not otherwise be
      * handled in a route.
      * @param {String} name         Name of the parameter. This will be used as the
      *                              attribute in the state model and as the querystring
