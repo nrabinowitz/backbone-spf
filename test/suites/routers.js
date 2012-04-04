@@ -29,6 +29,19 @@ casper
     });
     
 casper
+    .describe("Implicit Routers > Empty key")
+    .setup('', function() {
+        spf.configure({
+            views: {
+                '': '#layout_1'
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_1', '', '');
+    });
+    
+casper
     .describe("Static string-based routers > Single route")
     .setup('#test2', function() {
         spf.configure({

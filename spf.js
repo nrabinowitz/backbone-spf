@@ -12,14 +12,15 @@
             
         },
         ensureArray = function(a) {
-            return !a ? [] : _.isArray(a) ? a : [a]
+            return a===undefined ? [] : _.isArray(a) ? a : [a]
         },
         identity = _.identity,
+        viewCache = {},
+        routerCache = {},
+        qsParams = [],
         State, state,
         View, Layout, AppView,
-        Router, StateRouter, AppRouter,
-        viewCache = {},
-        routerCache = {};
+        Router, StateRouter, AppRouter;
         
     // --------------------------------
     // Application State
@@ -244,7 +245,7 @@
                 oldView = app.currentView,
                 viewKeys, viewConfig,
                 view, viewClass, fromRight;
-            if (viewKey && viewKey !== oldKey) {
+            if (viewKey !== undefined && viewKey !== oldKey) {
                 // look in cache
                 view = viewCache[viewKey];
                 if (!view) {
@@ -403,6 +404,7 @@
     
         initialize: function() {
             var router = this;
+            router.cache = routerCache;
             // instantiate routers
             _(config.views).each(function(viewConfig, k) {
                 routerCache[k] = new viewConfig.router();
@@ -453,7 +455,7 @@
         
         // encode a querystring from state parameters
         getQS: function() {
-            var qs = (this.qsParams || []).map(function(key) {
+            var qs = qsParams.map(function(key) {
                     var value = state.get(key),
                         fragment = '';
                     if (value) {
@@ -512,15 +514,40 @@
     };
     
     /**
+     * @name spf.addParameter
+     * Define a state parameter. While any state setting can simply be .set()
+     * on the state model, defining a setting as a parameter allows it to be set 
+     * in the querystring, and allows you to provide default values. This is most
+     * appropriate for application state settings that would not otherwise be
+     * handled in a route.
+     * @param {String} name         Name of the parameter. This will be used as the
+     *                              attribute in the state model and as the querystring
+     *                              parameter name.
+     * @param {Object} [options]    Optional settings:
+     * @param {Function} [options.deserialize]  Function to deserialize value from a string
+     * @param {Function} [options.serialize]    Function to serialize value to a string
+     * @param {mixed} [options.defaultValue]    Default value for the parameter
+     */
+    spf.addParameter = function(name, options) {
+        // add to querystring parameters
+        qsParams.push(name);
+        if (options) {
+            state.addParam(name, options.deserialize, options.serialize);
+            if (options.defaultValue) state.set(name, options.defaultValue);
+        }
+    };
+    
+    /**
      * @name spf.start
      * Start the application. Instantiates core objects and starts Backbone.history.
+     * @param {object} [options]    Options to pass to Backbone.history.start()
      */
-    spf.start = function() {
+    spf.start = function(options) {
         spf.router = new AppRouter();
         spf.app = new AppView({
             el: config.appElement
         });
-        Backbone.history.start();
+        Backbone.history.start(options);
     }
     
     return spf;
