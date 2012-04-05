@@ -182,6 +182,45 @@ casper
             'AttachingViewTwo was unbound from slot event');
     });
     
+    
+casper
+    .describe("Slots in template-based views")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                foo: {
+                    layout: '#template_2',
+                    id: 'foo',
+                    slots: {
+                        'div.slot1': ViewOne
+                    }
+                },
+                bar: {
+                    layout: '#template_2',
+                    id: 'bar',
+                    slots: {
+                        'div.slot1': '#template_1'
+                    }
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#foo', 'foo', 'foo');
+        t.assertText('#foo h2', 'Layout Template Test',
+            'View foo is using the correct template');
+        t.assertText('#foo div.slot1 h2', 'ViewOne',
+            'ViewOne slot initialized');
+    })
+    .thenOpen(baseUrl + '#bar')
+    .then(function() {
+        t.assertAtRoute('#bar', 'bar', 'bar');
+        t.assertText('#bar h2', 'Layout Template Test',
+            'View bar is using the correct template');
+        t.assertText('#bar div.slot1 div.template', 'Template Test',
+            'Templated slot initialized');
+    });
+    
 casper.run(function() {
     t.done();
 });

@@ -159,7 +159,6 @@ casper
     });
     
     
-    
 casper.run(function() {
     t.done();
 });
