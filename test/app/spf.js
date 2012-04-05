@@ -25,8 +25,8 @@
         BackboneView = Backbone.View,
         BackboneModel = Backbone.Model,
         State, state,
-        View, Layout, AppView,
-        Router, StateRouter, AppRouter;
+        View, Layout,
+        Router, StateRouter;
         
     // --------------------------------
     // Application State
@@ -90,8 +90,18 @@
     View = spf.View = BackboneView.extend({
         // flag whether or not the element exists in the DOM on initialization
         _ensureElement: function() {
-            BackboneView.prototype._ensureElement.call(this);
-            this.inDom = elementInDom(this.el);
+            var view = this,
+                content;
+            BackboneView.prototype._ensureElement.call(view);
+            // handle reusable template content
+            if (view.$el.is('script[type*="template"]')) {
+                var attrs = _.extend({}, {
+                    'class': view.className,
+                    'id': view.id
+                }, view.attributes);
+                view.setElement(view.make(view.tagName, attrs, view.$el.html()));
+            }
+            view.inDom = elementInDom(view.el);
         },
         // bind/unbind state listeners
         bindState: function(event, handler, context) {
@@ -152,8 +162,7 @@
             var view = this;
             view.clearSlots();
             view.unbindResize();
-            view.unbindState();
-            view.undelegateEvents();
+            View.clear.prototype.call(view);
         },
         
         /**
@@ -241,7 +250,7 @@
      * @class
      * Primary view for the application
      */
-    AppView = spf.AppView = BackboneView.extend({
+    spf.AppView = BackboneView.extend({
         
         initialize: function() {
             var app = this;
@@ -280,7 +289,8 @@
                     if (viewClass) {
                         // instatiate and add to DOM
                         view = app.currentView = viewCache[viewKey] = new viewClass({ parent: app });
-                        view.render().$el.appendTo(app.el);
+                        view.render();
+                        if (!view.inDom) view.$el.appendTo(app.el);
                     } else {
                         // this should only happen due to a coding error
                         throw "No view class found for view " + viewKey;
@@ -425,7 +435,7 @@
      * @class
      * Primary router for the application
      */
-    AppRouter = spf.AppRouter = Router.extend({
+    spf.AppRouter = Router.extend({
     
         initialize: function() {
             var router = this;
@@ -510,21 +520,37 @@
      */
     spf.configure = function(options) {
         _.extend(config, options);
-        // support shortcuts for static view layouts and state-based routers
-        _(config.views).each(function(viewConfig, k) {
+        // recursively deal with views
+        function processViewConfig(viewConfig) {
             // whole config is a view or a string - set up object
             if (viewConfig.prototype instanceof BackboneView || _.isString(viewConfig))
-                viewConfig = config.views[k] = { layout: viewConfig };
-            // layout is a string - create view with factory
-            if (_.isString(viewConfig.layout))
-                viewConfig.layout = Layout.extend({ 
-                    el: viewConfig.layout 
+                viewConfig = { layout: viewConfig };
+            var layout = viewConfig.layout,
+                slots = viewConfig.slots,
+                attrs = _.clone(viewConfig);
+            // layout is a string - create view
+            if (_.isString(layout))
+                layout = Layout.extend({ 
+                    el: layout 
                 });
-            // set slots and refresh
-            viewConfig.layout = viewConfig.layout.extend({ 
-                slotClasses: viewConfig.layout.prototype.slotClasses || viewConfig.slots,
-                refreshOn: viewConfig.refreshOn
-            });
+            if (!layout.prototype.slotClasses) {
+                // process slots, supporting nesting
+                _(slots).each(function(slot, k, o) {
+                    o[k] = processViewConfig(slot).layout;
+                });
+                // set slots
+                layout = layout.extend({ 
+                    slotClasses: slots || {}
+                });
+            }
+            // set any other settings, removing problematic keys
+            _(['layout', 'slots', 'router']).each(function(k) { delete attrs[k] });
+            viewConfig.layout = layout.extend(attrs);
+            return viewConfig;
+        }
+        // support shortcuts for static view layouts and state-based routers
+        _(config.views).each(function(viewConfig, k) {
+            viewConfig = config.views[k] = processViewConfig(viewConfig);
             // no router - default to single route based on key
             if (!viewConfig.router)
                 viewConfig.router = k;
@@ -576,8 +602,8 @@
      */
     spf.start = function(options) {
         // initialize the core objects
-        spf.router = new AppRouter();
-        spf.app = new AppView({
+        spf.router = new spf.AppRouter();
+        spf.app = new spf.AppView({
             el: config.appElement
         });
         // start the router machinery

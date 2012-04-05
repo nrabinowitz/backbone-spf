@@ -119,6 +119,44 @@ casper
         t.assertText('#test2', 'GlobalTest2',
             'GlobalTest2 was initialized');
     });
+
+casper
+    .describe("Template-based view")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                'foo': '#template_1'
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertVisible('div div.template',
+            'Template 1 is visible');
+        t.assertText('div div.template', 'Template Test',
+            'Template text shown');
+    });
+
+casper
+    .describe("Template-based view  > Additional attributes")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                'foo': {
+                    layout: '#template_1',
+                    id: 'new_layout',
+                    className: 'layout'
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertVisible('div div.template',
+            'Template 1 is visible');
+        t.assertVisible('#new_layout',
+            'Template 1 has the correct id');
+        t.assertVisible('#new_layout.layout',
+            'Template 1 has the correct CSS class');
+    });
     
     
     
