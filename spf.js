@@ -19,6 +19,9 @@
             return false; 
         },
         identity = _.identity,
+        addClasses = function() {
+            return _(arguments).filter(identity).join(' ')
+        },
         viewCache = {},
         routerCache = {},
         stateParams = {},
@@ -95,10 +98,11 @@
             BackboneView.prototype._ensureElement.call(view);
             // handle reusable template content
             if (view.$el.is('script[type*="template"]')) {
-                var attrs = _.extend({}, {
-                    'class': view.className,
-                    'id': view.id
-                }, view.attributes);
+                var templateId = view.$el.attr('id'),
+                    attrs = _.extend({}, {
+                        'class': addClasses(view.className, templateId),
+                        'id': view.id
+                    }, view.attributes);
                 view.setElement(view.make(view.tagName, attrs, view.$el.html()));
             }
             view.inDom = elementInDom(view.el);
@@ -523,7 +527,7 @@
     spf.configure = function(options) {
         _.extend(config, options);
         // recursively deal with views
-        function processViewConfig(viewConfig) {
+        function processViewConfig(viewConfig, depth) {
             // whole config is a view or a string - set up object
             if (viewConfig.prototype instanceof BackboneView || _.isString(viewConfig))
                 viewConfig = { layout: viewConfig };
@@ -532,13 +536,13 @@
                 attrs = _.clone(viewConfig);
             // layout is a string - create view
             if (_.isString(layout))
-                layout = Layout.extend({ 
+                layout = spf.Layout.extend({ 
                     el: layout 
                 });
             if (!layout.prototype.slotClasses) {
                 // process slots, supporting nesting
                 _(slots).each(function(slot, k, o) {
-                    o[k] = processViewConfig(slot).layout;
+                    o[k] = processViewConfig(slot, depth+1).layout;
                 });
                 // set slots
                 layout = layout.extend({ 
@@ -547,12 +551,19 @@
             }
             // set any other settings, removing problematic keys
             _(['layout', 'slots', 'router']).each(function(k) { delete attrs[k] });
+            // add depth classes
+            attrs.className = addClasses(
+                layout.prototype.className,
+                attrs.className, 
+                'depth' + depth, 
+                !depth ? 'top' : ''
+            );
             viewConfig.layout = layout.extend(attrs);
             return viewConfig;
         }
         // support shortcuts for static view layouts and state-based routers
         _(config.views).each(function(viewConfig, k) {
-            viewConfig = config.views[k] = processViewConfig(viewConfig);
+            viewConfig = config.views[k] = processViewConfig(viewConfig, 0);
             // no router - default to single route based on key
             if (!viewConfig.router)
                 viewConfig.router = k;

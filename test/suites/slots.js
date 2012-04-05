@@ -256,6 +256,7 @@ casper
                             slots: {
                                 'div.slot1' : {
                                     id: 'bar2',
+                                    className: 'baz',
                                     layout: '#template_2',
                                     slots: {
                                         'div.slot1' : {
@@ -291,6 +292,14 @@ casper
             'Slot bar2 visible with correct id');
         t.assertText('#bar #bar1 #bar2 #bar3 div.template', 'Template Test',
             'Slot bar3 using the right template');
+    })
+    .then(function() {
+        t.assertExists('#bar.top.depth0', 
+            'Top-level CSS set correctly');
+        t.assertExists('#bar #bar1.depth1',
+            'Slot bar1 CSS set correctly');
+        t.assertVisible('#bar #bar1 #bar2.baz.depth2',
+            'Slot bar2 CSS set correctly');
     })
     .then(function() {
         this.evaluate(function() { spf.app.currentView.slots['div.slot1'].clear() });
