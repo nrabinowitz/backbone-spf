@@ -134,6 +134,11 @@ casper
             'Template 1 is visible');
         t.assertText('div div.template', 'Template Test',
             'Template text shown');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.app.currentView.clear() });
+        t.assertDoesNotExist('#foo',
+            'View foo as been removed from DOM');
     });
 
 casper

@@ -160,7 +160,11 @@ casper
             'AttachingViewTwo used the slot element');
         t.assertExists('#slot_1_3 span',
             'AttachingViewTwo did not replace the DOM');
-        this.click('#slot_1_3 span');
+        try {
+            this.click('#slot_1_3 span');
+        } catch(e) {
+            t.fail('Failed on click: ' + e)
+        }
         t.assertState('test', 'foobar',
             'AttachingViewTwo handled slot event');
     })
@@ -177,7 +181,11 @@ casper
         t.assertExists('#slot_1_3 span',
             'Slot 3 still has its elements');
         this.evaluate(function() { spf.state.set('test', 'baz') });
-        this.click('#slot_1_3 span');
+        try {
+            this.click('#slot_1_3 span');
+        } catch(e) {
+            t.fail('Failed on click: ' + e)
+        }
         t.assertState('test', 'baz',
             'AttachingViewTwo was unbound from slot event');
     });
@@ -219,6 +227,77 @@ casper
             'View bar is using the correct template');
         t.assertText('#bar div.slot1 div.template', 'Template Test',
             'Templated slot initialized');
+    });
+   
+casper
+    .describe("Nested Slots in template-based views")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                foo: {
+                    layout: '#template_2',
+                    id: 'foo',
+                    slots: {
+                        'div.slot1': {
+                            layout: '#template_2',
+                            slots: {
+                                'div.slot1' : ViewOne
+                            }
+                        }
+                    }
+                },
+                bar: {
+                    layout: '#template_2',
+                    id: 'bar',
+                    slots: {
+                        'div.slot1': {
+                            layout: '#template_2',
+                            id: 'bar1',
+                            slots: {
+                                'div.slot1' : {
+                                    id: 'bar2',
+                                    layout: '#template_2',
+                                    slots: {
+                                        'div.slot1' : {
+                                            layout: '#template_1',
+                                            id: 'bar3'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#foo', 'foo', 'foo');
+        t.assertText('#foo h2', 'Layout Template Test',
+            'View foo is using the correct template');
+        t.assertText('#foo div.slot1 div > h2', 'Layout Template Test',
+            'Slot using the right template');
+        t.assertText('#foo div.slot1 div.slot1 h2', 'ViewOne',
+            'Nested slot using the ViewOne view');
+    })
+    .thenOpen(baseUrl + '#bar')
+    .then(function() {
+        t.assertAtRoute('#bar', 'bar', 'bar');
+        t.assertVisible('#bar #bar1',
+            'Slot bar1 visible with correct id');
+        t.assertVisible('#bar #bar1 #bar2',
+            'Slot bar2 visible with correct id');
+        t.assertVisible('#bar #bar1 #bar2 #bar3',
+            'Slot bar2 visible with correct id');
+        t.assertText('#bar #bar1 #bar2 #bar3 div.template', 'Template Test',
+            'Slot bar3 using the right template');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.app.currentView.slots['div.slot1'].clear() });
+        t.assertVisible('div.slot1',
+            'Slot 1 still there');
+        t.assertEvalEquals(function() { return $('#bar div.slot1').html() }, '',
+            'Slot 1 is empty');
     });
     
 casper.run(function() {

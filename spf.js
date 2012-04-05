@@ -162,8 +162,10 @@
             var view = this;
             view.clearSlots();
             view.unbindResize();
-            View.clear.prototype.call(view);
+            View.prototype.clear.call(view);
         },
+        
+        clearDom: false,
         
         /**
          * Clear slot views
