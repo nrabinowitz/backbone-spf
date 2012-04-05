@@ -25,8 +25,8 @@
         BackboneView = Backbone.View,
         BackboneModel = Backbone.Model,
         State, state,
-        View, Layout, AppView,
-        Router, StateRouter, AppRouter;
+        View, Layout,
+        Router, StateRouter;
         
     // --------------------------------
     // Application State
@@ -152,8 +152,7 @@
             var view = this;
             view.clearSlots();
             view.unbindResize();
-            view.unbindState();
-            view.undelegateEvents();
+            View.clear.prototype.call(view);
         },
         
         /**
@@ -241,7 +240,7 @@
      * @class
      * Primary view for the application
      */
-    AppView = spf.AppView = BackboneView.extend({
+    spf.AppView = BackboneView.extend({
         
         initialize: function() {
             var app = this;
@@ -280,7 +279,8 @@
                     if (viewClass) {
                         // instatiate and add to DOM
                         view = app.currentView = viewCache[viewKey] = new viewClass({ parent: app });
-                        view.render().$el.appendTo(app.el);
+                        view.render();
+                        if (!view.inDom) view.$el.appendTo(app.el);
                     } else {
                         // this should only happen due to a coding error
                         throw "No view class found for view " + viewKey;
@@ -425,7 +425,7 @@
      * @class
      * Primary router for the application
      */
-    AppRouter = spf.AppRouter = Router.extend({
+    spf.AppRouter = Router.extend({
     
         initialize: function() {
             var router = this;
@@ -576,8 +576,8 @@
      */
     spf.start = function(options) {
         // initialize the core objects
-        spf.router = new AppRouter();
-        spf.app = new AppView({
+        spf.router = new spf.AppRouter();
+        spf.app = new spf.AppView({
             el: config.appElement
         });
         // start the router machinery
