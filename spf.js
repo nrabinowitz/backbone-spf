@@ -98,12 +98,13 @@
             BackboneView.prototype._ensureElement.call(view);
             // handle reusable template content
             if (view.$el.is('script[type*="template"]')) {
+                view.template = view.$el.html();
                 var templateId = view.$el.attr('id'),
                     attrs = _.extend({}, {
                         'class': addClasses(view.className, templateId),
                         'id': view.id
                     }, view.attributes);
-                view.setElement(view.make(view.tagName, attrs, view.$el.html()));
+                view.setElement(view.make(view.tagName, attrs));
             }
             view.inDom = elementInDom(view.el);
         },
@@ -193,9 +194,11 @@
          * Render view
          */
         render: function() {
-            this.layout();
-            this.bindResize();
-            this.updateSlots();
+            var view = this;
+            if (view.template) view.$el.html(view.template);
+            view.layout();
+            view.bindResize();
+            view.updateSlots();
             return this;
         },
         
@@ -551,10 +554,9 @@
             }
             // set any other settings, removing problematic keys
             _(['layout', 'slots', 'router']).each(function(k) { delete attrs[k] });
-            // add depth classes
+            // add CSS classes
             attrs.className = addClasses(
-                layout.prototype.className,
-                attrs.className, 
+                layout.prototype.className || attrs.className,
                 'depth' + depth, 
                 !depth ? 'top' : ''
             );
