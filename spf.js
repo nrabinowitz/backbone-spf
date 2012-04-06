@@ -295,7 +295,7 @@
         updateView: function() {
             var app = this,
                 viewKey = state.get('view'),
-                oldKey = app.viewKey,
+                oldKey = state.previous('view'),
                 oldView = app.currentView,
                 viewKeys, viewConfig,
                 view, viewClass, fromRight;
@@ -316,7 +316,6 @@
                         throw "No view class found for view " + viewKey;
                     }
                 }
-                app.viewKey = viewKey;
                 // work out left/right
                 viewKeys = _(config.views).keys();
                 fromRight = oldKey ? 

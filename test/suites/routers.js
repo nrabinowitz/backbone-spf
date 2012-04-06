@@ -29,6 +29,57 @@ casper
     });
     
 casper
+    .describe("Implicit Routers > History management")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                foo: '#layout_1',
+                bar: '#layout_2',
+                baz: '#layout_3'
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.state.set({ view: 'bar'}) });
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_2', 'bar', 'bar');
+    })
+    .back()
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo');
+    })
+    .forward()
+    .then(function() {
+        t.assertAtRoute('#layout_2', 'bar', 'bar');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.state.set({ view: 'baz'}) })
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_3', 'baz', 'baz');
+    })
+    .back()
+    .then(function() {
+        t.assertAtRoute('#layout_2', 'bar', 'bar');
+    })
+    .back()
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo');
+    })
+    .forward()
+    .then(function() {
+        t.assertAtRoute('#layout_2', 'bar', 'bar');
+    })
+    .forward()
+    .then(function() {
+        t.assertAtRoute('#layout_3', 'baz', 'baz');
+    });
+    
+casper
     .describe("Implicit Routers > Empty key")
     .setup('', function() {
         spf.configure({
