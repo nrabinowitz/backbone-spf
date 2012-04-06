@@ -14,8 +14,8 @@
         ensureArray = function(a) {
             return a===undefined ? [] : _.isArray(a) ? a : [a]
         },
-        elementInDom = function(el) { 
-            while (el = el.parentNode) if (el === document) return true; 
+        elementInDom = function(el) {
+            while (el && (el = el.parentNode)) if (el === document) return true; 
             return false; 
         },
         identity = _.identity,
@@ -560,6 +560,7 @@
                 'depth' + depth, 
                 !depth ? 'top' : ''
             );
+            if (!depth) attrs.topLevel = true;
             viewConfig.layout = layout.extend(attrs);
             return viewConfig;
         }
