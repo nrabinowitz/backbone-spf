@@ -152,7 +152,7 @@ casper
             'ViewOne slot rendered');
         t.assertExists('#slot_1_1 div.view_one',
             'ViewOne created a div element');
-        t.assertText('#slot_1_2 h2', 'AttachingViewOne',
+        t.assertText('#slot_1_2 h2', 'AttachingView',
             'AttachingViewOne slot rendered');
         t.assertDoesNotExist('#slot_1_2 div',
             'AttachingViewOne used the slot element');
@@ -169,7 +169,7 @@ casper
             'AttachingViewTwo handled slot event');
     })
     .then(function() {
-        this.evaluate(function() { spf.app.currentView.clear() });
+        this.evaluate(function() { spf.app.currentView.clearSlots() });
         t.assertExists('#slot_1_1',
             'Slot 1 still there');
         t.assertExists('#slot_1_2',
@@ -189,7 +189,67 @@ casper
         t.assertState('test', 'baz',
             'AttachingViewTwo was unbound from slot event');
     });
+
     
+casper
+    .describe("Slot refresh > Element removal, templated layout")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                foo: { 
+                    layout: '#template_3',
+                    slots: {
+                        '#slot_4_1': ViewOne,
+                        '#slot_4_2': AttachingViewThree,
+                        '#slot_4_3': AttachingViewFour
+                    }
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_4', 'foo', 'foo');
+        t.assertText('#slot_4_1 h2', 'ViewOne',
+            'ViewOne slot rendered');
+        t.assertExists('#slot_4_1 div.view_one',
+            'ViewOne created a div element');
+        t.assertText('#slot_4_2 h2', 'AttachingView',
+            'AttachingViewThree slot rendered');
+        t.assertDoesNotExist('#slot_4_2 div',
+            'AttachingViewThree used the slot element');
+        t.assertDoesNotExist('#slot_4_3 div',
+            'AttachingViewFour used the slot element');
+        t.assertExists('#slot_4_3 span',
+            'AttachingViewFour did not replace the DOM');
+        try {
+            this.click('#slot_4_3 span');
+        } catch(e) {
+            t.fail('Failed on click: ' + e)
+        }
+        t.assertState('test', 'foobar',
+            'AttachingViewFour handled slot event');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.app.currentView.clearSlots() });
+        t.assertExists('#slot_4_1',
+            'Slot 1 still there');
+        t.assertExists('#slot_4_2',
+            'Slot 2 still there');
+        t.assertEvalEquals(function() { return $('#slot_4_1').html() }, '',
+            'Slot 1 is empty');
+        t.assertEvalEquals(function() { return $('#slot_4_2').html() }, '',
+            'Slot 2 is empty');
+        t.assertExists('#slot_4_3 span',
+            'Slot 3 still has its elements');
+        this.evaluate(function() { spf.state.set('test', 'baz') });
+        try {
+            this.click('#slot_4_3 span');
+        } catch(e) {
+            t.fail('Failed on click: ' + e)
+        }
+        t.assertState('test', 'baz',
+            'AttachingViewFour was unbound from slot event');
+    });    
     
 casper
     .describe("Slots in template-based views")

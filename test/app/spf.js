@@ -14,8 +14,8 @@
         ensureArray = function(a) {
             return a===undefined ? [] : _.isArray(a) ? a : [a]
         },
-        elementInDom = function(el) { 
-            while (el = el.parentNode) if (el === document) return true; 
+        elementInDom = function(el) {
+            while (el && (el = el.parentNode)) if (el === document) return true; 
             return false; 
         },
         identity = _.identity,
@@ -91,10 +91,11 @@
      * Extend the base view class with some useful features
      */
     View = spf.View = BackboneView.extend({
-        // flag whether or not the element exists in the DOM on initialization
+        // deal with templates and flag whether the element exists in the DOM on initialization
         _ensureElement: function() {
             var view = this,
-                content;
+                el = view.el,
+                content, parent, parentEl;
             BackboneView.prototype._ensureElement.call(view);
             // handle reusable template content
             if (view.$el.is('script[type*="template"]')) {
@@ -106,7 +107,17 @@
                     }, view.attributes);
                 view.setElement(view.make(view.tagName, attrs));
             }
-            view.inDom = elementInDom(view.el);
+            // handle children of parents not yet in DOM
+            if (!view.el 
+                && el 
+                && (parent = view.options.parent)
+                && (parentEl = parent.el)
+                && (el = $(el, parentEl)[0])) {
+                view.setElement(el);
+                view.inDom = true;
+            } 
+            // otherwise, check whether we're already in the DOM
+            else view.inDom = elementInDom(view.el);
         },
         // bind/unbind state listeners
         bindState: function(event, handler, context) {
@@ -560,6 +571,7 @@
                 'depth' + depth, 
                 !depth ? 'top' : ''
             );
+            if (!depth) attrs.topLevel = true;
             viewConfig.layout = layout.extend(attrs);
             return viewConfig;
         }

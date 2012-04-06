@@ -24,9 +24,10 @@ var ViewTwo = spf.View.extend({
 var AttachingViewOne = spf.View.extend({
     el: '#slot_1_2',
     render: function() {
-        this.$el.html('<h2>AttachingViewOne</h2><span>' + this.cid + '</span>')
+        this.$el.html('<h2>AttachingView</h2><span>' + this.cid + '</span>')
     }
 });
+
 var AttachingViewTwo = spf.View.extend({
     el: '#slot_1_3',
     clearDom: false,
@@ -36,6 +37,14 @@ var AttachingViewTwo = spf.View.extend({
     setParam: function() {
         state.set('test', 'foobar');
     }
+});
+
+var AttachingViewThree = AttachingViewOne.extend({
+    el: '#slot_4_2'
+});
+
+var AttachingViewFour = AttachingViewTwo.extend({
+    el: '#slot_4_3'
 });
 
 var LayoutView = spf.Layout.extend({
