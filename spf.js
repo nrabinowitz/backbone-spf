@@ -308,7 +308,7 @@
                     viewClass = viewConfig && viewConfig.layout;
                     if (viewClass) {
                         // instatiate and add to DOM
-                        view = app.currentView = viewCache[viewKey] = new viewClass({ parent: app });
+                        view = viewCache[viewKey] = new viewClass({ parent: app });
                         view.render();
                         if (!view.inDom) view.$el.appendTo(app.el);
                     } else {
@@ -316,6 +316,7 @@
                         throw "No view class found for view " + viewKey;
                     }
                 }
+                app.currentView = view;
                 // work out left/right
                 viewKeys = _(config.views).keys();
                 fromRight = oldKey ? 

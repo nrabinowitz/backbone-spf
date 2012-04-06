@@ -163,6 +163,43 @@ casper
             'Template 1 has the correct CSS class');
     });
     
+
+casper
+    .describe("Layout open and close")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                foo: '#layout_1',
+                bar: '#layout_2'
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo');
+        t.assertNotVisible('#layout_2',
+            'View bar is hidden');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.state.set({ view: 'bar'}) });
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_2', 'bar', 'bar');
+        t.assertNotVisible('#layout_1',
+            'View foo is hidden');
+    })
+    .back()
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo');
+        t.assertNotVisible('#layout_2',
+            'View bar is hidden');
+    })
+    .forward()
+    .then(function() {
+        t.assertAtRoute('#layout_2', 'bar', 'bar');
+        t.assertNotVisible('#layout_1',
+            'View foo is hidden');
+    });
+    
     
 casper.run(function() {
     t.done();
