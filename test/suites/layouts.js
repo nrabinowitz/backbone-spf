@@ -163,6 +163,25 @@ casper
             'Template 1 has the correct CSS class');
     });
     
+casper
+    .describe("Template-based view  > Using a custom layout class")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                'foo': {
+                    layout: TemplateLayoutView,
+                    template: '#template_1'
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertVisible('div div.template',
+            'Template 1 is visible');
+        t.assertVisible('#custom',
+            'Special view layout method called');
+    });
+    
 
 casper
     .describe("Layout open and close")

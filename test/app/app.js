@@ -54,6 +54,12 @@ var LayoutView = spf.Layout.extend({
     }
 });
 
+var TemplateLayoutView = spf.Layout.extend({
+    layout: function() {
+        this.$el.append('<div id="custom">custom</div>');
+    }
+});
+
 var GlobalTest1 = Backbone.View.extend({
     el: '#test1',
     initialize: function() {

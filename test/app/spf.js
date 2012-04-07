@@ -91,21 +91,27 @@
      * Extend the base view class with some useful features
      */
     View = spf.View = BackboneView.extend({
+    
         // deal with templates and flag whether the element exists in the DOM on initialization
         _ensureElement: function() {
             var view = this,
+                templateSelector = 'script[type*="template"]',
                 el = view.el,
-                content, parent, parentEl;
+                templateId,
+                parent, parentEl;
             BackboneView.prototype._ensureElement.call(view);
             // handle reusable template content
-            if (view.$el.is('script[type*="template"]')) {
+            if (view.$el.is(templateSelector)) {
                 view.template = view.$el.html();
-                var templateId = view.$el.attr('id'),
+                templateId = view.$el.attr('id'),
                     attrs = _.extend({}, {
                         'class': addClasses(view.className, templateId),
                         'id': view.id
                     }, view.attributes);
                 view.setElement(view.make(view.tagName, attrs));
+            } else if ((templateId = view.template) && $(templateId).is(templateSelector)) {
+                view.className = addClasses(view.className, templateId);
+                view.template = $(view.template).html();
             }
             // handle children of parents not yet in DOM
             if (!view.el 
@@ -119,6 +125,7 @@
             // otherwise, check whether we're already in the DOM
             else view.inDom = elementInDom(view.el);
         },
+        
         // bind/unbind state listeners
         bindState: function(event, handler, context) {
             // create handler array if necessary
@@ -128,11 +135,13 @@
             state.on(event, handler, context);
             this._stateHandlers.push({ event: event, handler: handler, context: context });
         },
+        
         unbindState: function() {
             (this._stateHandlers || []).forEach(function(h) {
                 state.off(h.event, h.handler, h.context);
             });
         },
+        
         // basic clear support
         clear: function() {
             var view = this;
@@ -145,8 +154,14 @@
             view.undelegateEvents();
             return view;
         },
+        
         // set to false in subclasses to leave the DOM alone
-        clearDom: true
+        clearDom: true,
+        
+        // passthrough by default
+        ready: function(callback) {
+            callback();
+        }
     });
     
     /**
@@ -207,9 +222,8 @@
         render: function() {
             var view = this;
             if (view.template) view.$el.html(view.template);
-            view.layout();
-            view.bindResize();
             view.updateSlots();
+            view.bindResize();
             return this;
         },
         
@@ -219,13 +233,19 @@
          * will be appended to that element.
          */
         updateSlots: function() {
-            var view = this;
+            var view = this,
+                layoutAfter = _.after(_.keys(view.slotClasses).length, function() {
+                    view.layout();
+                });
             _(view.slotClasses).each(function(cls, key) {
                 // instatiate slots
                 var slot = view.slots[key] = new cls({ 
                         parent: view
                     });
-                slot.render();
+                slot.ready(function() {
+                    slot.render();
+                    layoutAfter();
+                });
                 if (!slot.inDom) slot.$el.appendTo(view.$(key));
             });
         },
