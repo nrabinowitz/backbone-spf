@@ -56,7 +56,8 @@
         },
         // get a serialized value
         getSerialized: function(key) {
-            return this.serialize(key, this.get(key));
+            var val = this.get(key);
+            return val !== undefined && this.serialize(key, val);
         },
         // override set() to deserialize if required
         set: function(key, value, options) {

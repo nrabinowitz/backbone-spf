@@ -3,7 +3,6 @@ var t = casper.test,
 
 casper.start();
 
-
 casper
     .describe("Setting querystring parameters")
     .setup('#foo', function() {
@@ -97,6 +96,39 @@ casper
         t.assertEvalEquals(function() { return spf.router.getPermalink() }, baseUrl + '#foo?param3=3,3',
             'Permalink set correctly with param3');
     });
+    
+casper
+    .describe("Getting querystring parameters > non-existent param")
+    .setup('#foo', function() {
+        spf.addParameter('param1', {
+            deserialize: function(s) {
+                var parts = s.split(',');
+                return { a: parts[0], b: parts[1] } 
+            },
+            serialize: function(o) {
+                return [o.a, o.b].join(',')
+            }
+        });
+        spf.configure({
+            views: {
+                foo: '#layout_1'
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo');
+        t.assertState('param1', null,
+            'No value for param1');
+        t.assertEvalEquals(function() { return spf.router.getQS() }, '',
+            'No value in querystring');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.state.set('param1', 'c,d') });
+        t.assertEvalEquals(function() { return JSON.stringify(spf.state.get('param1')) }, '{"a":"c","b":"d"}',
+            'Deserialization correct for param1');
+        t.assertEvalEquals(function() { return spf.router.getPermalink() }, baseUrl + '#foo?param1=c,d',
+            'Permalink set correctly with param1');
+    })
     
 casper.run(function() {
     t.done();
