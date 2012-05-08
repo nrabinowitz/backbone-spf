@@ -5,6 +5,7 @@
  */
 (function(Backbone, window) {
     var spf = window.spf = {},
+        hasRequire = !!window.require,
         // default application settings
         config = spf.config = {
             appElement: 'body',
@@ -325,7 +326,7 @@
                 view = viewCache[viewKey];
                 if (!view) {
                     // no cache - get view class from config and instantiate
-                    viewConfig = config.views[viewKey];
+                    viewConfig = processViewConfig(config.views[viewKey], 0);
                     viewClass = viewConfig && viewConfig.layout;
                     if (viewClass) {
                         // instatiate and add to DOM
@@ -553,7 +554,47 @@
     // --------------------------------
     // Module methods
     // --------------------------------
-
+    
+    function ensureObject(viewConfig) {
+        // whole config is a view or a string - set up object
+        return (viewConfig.prototype instanceof BackboneView || _.isString(viewConfig)) ? 
+            { layout: viewConfig } : viewConfig;
+    }
+    
+    // recursively process a view configuration object
+    function processViewConfig(viewConfig, depth) {
+        viewConfig = ensureObject(viewConfig);
+        var layout = viewConfig.layout,
+            slots = viewConfig.slots,
+            attrs = _.clone(viewConfig);
+        // layout is a string - create view
+        if (_.isString(layout))
+            layout = spf.Layout.extend({ 
+                el: layout 
+            });
+        if (!layout.prototype.slotClasses) {
+            // process slots, supporting nesting
+            _(slots).each(function(slot, k, o) {
+                o[k] = processViewConfig(slot, depth+1).layout;
+            });
+            // set slots
+            layout = layout.extend({ 
+                slotClasses: slots || {}
+            });
+        }
+        // set any other settings, removing problematic keys
+        _(['layout', 'slots', 'router']).each(function(k) { delete attrs[k] });
+        // add CSS classes
+        attrs.className = addClasses(
+            layout.prototype.className || attrs.className,
+            'depth' + depth, 
+            !depth ? 'top' : ''
+        );
+        if (!depth) attrs.topLevel = true;
+        viewConfig.layout = layout.extend(attrs);
+        return viewConfig;
+    }
+    
     /**
      * @name spf.config
      * Configure the application
@@ -561,44 +602,12 @@
      */
     spf.configure = function(options) {
         _.extend(config, options);
-        // recursively deal with views
-        function processViewConfig(viewConfig, depth) {
-            // whole config is a view or a string - set up object
-            if (viewConfig.prototype instanceof BackboneView || _.isString(viewConfig))
-                viewConfig = { layout: viewConfig };
-            var layout = viewConfig.layout,
-                slots = viewConfig.slots,
-                attrs = _.clone(viewConfig);
-            // layout is a string - create view
-            if (_.isString(layout))
-                layout = spf.Layout.extend({ 
-                    el: layout 
-                });
-            if (!layout.prototype.slotClasses) {
-                // process slots, supporting nesting
-                _(slots).each(function(slot, k, o) {
-                    o[k] = processViewConfig(slot, depth+1).layout;
-                });
-                // set slots
-                layout = layout.extend({ 
-                    slotClasses: slots || {}
-                });
-            }
-            // set any other settings, removing problematic keys
-            _(['layout', 'slots', 'router']).each(function(k) { delete attrs[k] });
-            // add CSS classes
-            attrs.className = addClasses(
-                layout.prototype.className || attrs.className,
-                'depth' + depth, 
-                !depth ? 'top' : ''
-            );
-            if (!depth) attrs.topLevel = true;
-            viewConfig.layout = layout.extend(attrs);
-            return viewConfig;
-        }
         // support shortcuts for static view layouts and state-based routers
         _(config.views).each(function(viewConfig, k) {
-            viewConfig = config.views[k] = processViewConfig(viewConfig, 0);
+            // whole config is a view or a string - set up object
+            viewConfig = config.views[k] = ensureObject(viewConfig);
+            // recursively deal with views
+            // viewConfig = config.views[k] = processViewConfig(viewConfig, 0);
             // no router - default to single route based on key
             if (!viewConfig.router)
                 viewConfig.router = k;
