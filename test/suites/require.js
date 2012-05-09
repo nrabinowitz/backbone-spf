@@ -78,6 +78,36 @@ casper
             'GlobalTest1 was initialized');
     });
     
+casper
+    .describe("Require > Nested Slots in template-based views")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                foo: {
+                    layout: '#template_2',
+                    id: 'foo',
+                    slots: {
+                        'div.slot1': {
+                            layout: '#template_2',
+                            slots: {
+                                'div.slot1' : 'require/view1'
+                            }
+                        }
+                    }
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#foo', 'foo', 'foo');
+        t.assertText('#foo h2', 'Layout Template Test',
+            'View foo is using the correct template');
+        t.assertText('#foo div.slot1 div > h2', 'Layout Template Test',
+            'Slot using the right template');
+        t.assertText('#foo div.slot1 div.slot1 h2', 'ViewOne',
+            'Nested slot using the ViewOne view');
+    });
+    
 casper.run(function() {
     t.done();
 });
