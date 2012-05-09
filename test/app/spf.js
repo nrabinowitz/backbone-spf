@@ -236,19 +236,21 @@
          */
         updateSlots: function() {
             var view = this,
-                layoutAfter = _.after(_.keys(view.slotClasses).length, function() {
+                layoutAfter = _.after(_.keys(view.slotConfig).length, function() {
                     view.layout();
                 });
-            _(view.slotClasses).each(function(cls, key) {
-                // instatiate slots
-                var slot = view.slots[key] = new cls({ 
-                        parent: view
+            _(view.slotConfig).each(function(slotConfig, key) {
+                processViewConfig(slotConfig, view.depth+1, function(slotConfig) {
+                    // instatiate slots
+                    var slot = view.slots[key] = new slotConfig.layout({ 
+                            parent: view
+                        });
+                    slot.ready(function() {
+                        slot.render();
+                        layoutAfter();
                     });
-                slot.ready(function() {
-                    slot.render();
-                    layoutAfter();
+                    if (!slot.inDom) slot.$el.appendTo(view.$(key));
                 });
-                if (!slot.inDom) slot.$el.appendTo(view.$(key));
             });
         },
         
@@ -321,23 +323,8 @@
                 oldView = app.currentView,
                 viewKeys, viewConfig,
                 view, viewClass, fromRight;
-            if (viewKey !== undefined && viewKey !== oldKey) {
-                // look in cache
-                view = viewCache[viewKey];
-                if (!view) {
-                    // no cache - get view class from config and instantiate
-                    viewConfig = processViewConfig(config.views[viewKey], 0);
-                    viewClass = viewConfig && viewConfig.layout;
-                    if (viewClass) {
-                        // instatiate and add to DOM
-                        view = viewCache[viewKey] = new viewClass({ parent: app });
-                        view.render();
-                        if (!view.inDom) view.$el.appendTo(app.el);
-                    } else {
-                        // this should only happen due to a coding error
-                        throw "No view class found for view " + viewKey;
-                    }
-                }
+            // callback
+            function swapViews(view) {
                 app.currentView = view;
                 // work out left/right
                 viewKeys = _(config.views).keys();
@@ -348,6 +335,26 @@
                 if (oldView) app.close(oldView, fromRight);
                 // open new view
                 app.open(view, fromRight);
+            }
+            if (viewKey !== undefined && viewKey !== oldKey) {
+                // look in cache
+                view = viewCache[viewKey];
+                if (!view) {
+                    // no cache - get view class from config and instantiate
+                    processViewConfig(config.views[viewKey], 0, function(viewConfig) {
+                        viewClass = viewConfig && viewConfig.layout;
+                        if (viewClass) {
+                            // instatiate and add to DOM
+                            view = viewCache[viewKey] = new viewClass({ parent: app });
+                            view.render();
+                            if (!view.inDom) view.$el.appendTo(app.el);
+                        } else {
+                            // this should only happen due to a coding error
+                            throw "No view class found for view " + viewKey;
+                        }
+                        swapViews(view);
+                    });
+                } else swapViews(view);
             }
         },
         
@@ -562,37 +569,46 @@
     }
     
     // recursively process a view configuration object
-    function processViewConfig(viewConfig, depth) {
+    function processViewConfig(viewConfig, depth, callback) {
+        // early exit
+        if (viewConfig._processed) callback(viewConfig);
         viewConfig = ensureObject(viewConfig);
-        var layout = viewConfig.layout,
-            slots = viewConfig.slots,
-            attrs = _.clone(viewConfig);
-        // layout is a string - create view
-        if (_.isString(layout))
-            layout = spf.Layout.extend({ 
-                el: layout 
-            });
-        if (!layout.prototype.slotClasses) {
-            // process slots, supporting nesting
-            _(slots).each(function(slot, k, o) {
-                o[k] = processViewConfig(slot, depth+1).layout;
-            });
-            // set slots
-            layout = layout.extend({ 
-                slotClasses: slots || {}
-            });
+        function checkRequire(f) {
+            var layout = viewConfig.layout;
+            // XXX: more checks here
+            if (hasRequire && _.isString(layout))
+                require([layout], f);
+            else f(layout);
         }
-        // set any other settings, removing problematic keys
-        _(['layout', 'slots', 'router']).each(function(k) { delete attrs[k] });
-        // add CSS classes
-        attrs.className = addClasses(
-            layout.prototype.className || attrs.className,
-            'depth' + depth, 
-            !depth ? 'top' : ''
-        );
-        if (!depth) attrs.topLevel = true;
-        viewConfig.layout = layout.extend(attrs);
-        return viewConfig;
+        checkRequire(function(layout) {
+            var slots = viewConfig.slots,
+                attrs = _.clone(viewConfig);
+            // layout is a string - create view
+            if (_.isString(layout))
+                layout = spf.Layout.extend({ 
+                    el: layout 
+                });
+            if (!layout.prototype.slotConfig) {
+                // set slots
+                layout = layout.extend({ 
+                    slotConfig: slots || {}
+                });
+            }
+            // set any other settings, removing problematic keys
+            _(['layout', 'slots', 'router']).each(function(k) { delete attrs[k] });
+            // add CSS classes
+            attrs.className = addClasses(
+                layout.prototype.className || attrs.className,
+                'depth' + depth, 
+                !depth ? 'top' : ''
+            );
+            attrs.topLevel = !depth;
+            attrs.depth = depth;
+            viewConfig.layout = layout.extend(attrs);
+            // avoid calling multiple times
+            viewConfig._processed = 1;
+            callback(viewConfig);
+        });
     }
     
     /**
@@ -606,8 +622,6 @@
         _(config.views).each(function(viewConfig, k) {
             // whole config is a view or a string - set up object
             viewConfig = config.views[k] = ensureObject(viewConfig);
-            // recursively deal with views
-            // viewConfig = config.views[k] = processViewConfig(viewConfig, 0);
             // no router - default to single route based on key
             if (!viewConfig.router)
                 viewConfig.router = k;
