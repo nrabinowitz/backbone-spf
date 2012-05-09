@@ -300,8 +300,10 @@
             var app = this;
             app.globals = [];
             // initialize global views
-            (config.globalViews || []).forEach(function(cls) {
-                app.globals.push(new cls({ parent: app }));
+            ensureArray(config.globalViews).forEach(function(globalView) {
+                processViewConfig(globalView, -1, function(globalConfig) {
+                    app.globals.push(new globalConfig.layout({ parent: app }));
+                });
             });
             // listen for state changes
             state.bind('change:view', app.updateView, app);
@@ -575,8 +577,8 @@
         viewConfig = ensureObject(viewConfig);
         function checkRequire(f) {
             var layout = viewConfig.layout;
-            // XXX: more checks here
-            if (hasRequire && _.isString(layout))
+            // does this look like a require dependency? -- a little iffy; could match some selectors
+            if (hasRequire && _.isString(layout) && (layout.match(/^\w+$/) || layout.match(/\//)))
                 require([layout], f);
             else f(layout);
         }
