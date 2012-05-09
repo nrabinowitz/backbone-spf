@@ -564,7 +564,7 @@
     // Module methods
     // --------------------------------
     
-    function ensureObject(viewConfig) {
+    function ensureViewObject(viewConfig) {
         // whole config is a view or a string - set up object
         return (viewConfig.prototype instanceof BackboneView || _.isString(viewConfig)) ? 
             { layout: viewConfig } : viewConfig;
@@ -574,11 +574,14 @@
     function processViewConfig(viewConfig, depth, callback) {
         // early exit
         if (viewConfig._processed) callback(viewConfig);
-        viewConfig = ensureObject(viewConfig);
+        viewConfig = ensureViewObject(viewConfig);
         function checkRequire(f) {
             var layout = viewConfig.layout;
             // does this look like a require dependency? -- a little iffy; could match some selectors
-            if (hasRequire && _.isString(layout) && (layout.match(/^\w+$/) || layout.match(/\//)))
+            if (hasRequire 
+                    && !viewConfig.noRequire
+                    && _.isString(layout) 
+                    && (viewConfig.useRequire || layout.match(/^\w+$/) || layout.match(/\//)))
                 require([layout], f);
             else f(layout);
         }
@@ -623,7 +626,7 @@
         // support shortcuts for static view layouts and state-based routers
         _(config.views).each(function(viewConfig, k) {
             // whole config is a view or a string - set up object
-            viewConfig = config.views[k] = ensureObject(viewConfig);
+            viewConfig = config.views[k] = ensureViewObject(viewConfig);
             // no router - default to single route based on key
             if (!viewConfig.router)
                 viewConfig.router = k;
