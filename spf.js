@@ -10,7 +10,7 @@
  */
 (function(Backbone, window) {
     var spf = window.spf = {},
-        hasRequire = !!window.require,
+        hasRequire = typeof define == 'function' && define.amd,
         // default application settings
         config = spf.config = {
             appElement: 'body',
@@ -642,6 +642,7 @@
                     viewKey: k, 
                     routeStrings: viewConfig.router
                 });
+            // XXX: Handle require'd routers here?
         });
         return spf;
     };

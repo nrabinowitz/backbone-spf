@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2011, Nick Rabinowitz / Google Ancient Places Project
+ * Licensed under the BSD License (see LICENSE.txt)
+ */
+
 /**
  * @namespace
  * The spf namespace includes all Backbone-SPF functionality.
@@ -5,7 +10,7 @@
  */
 (function(Backbone, window) {
     var spf = window.spf = {},
-        hasRequire = !!window.require,
+        hasRequire = typeof define == 'function' && define.amd,
         // default application settings
         config = spf.config = {
             appElement: 'body',
@@ -577,10 +582,11 @@
         viewConfig = ensureViewObject(viewConfig);
         function checkRequire(f) {
             var layout = viewConfig.layout;
-            // does this look like a require dependency? -- a little iffy; could match some selectors
+            // does this look like a require dependency?
             if (hasRequire 
-                    && !viewConfig.noRequire
                     && _.isString(layout) 
+                    // string test could match some selectors, so allow explicit choices
+                    && !viewConfig.noRequire
                     && (viewConfig.useRequire || layout.match(/^\w+$/) || layout.match(/\//)))
                 require([layout], f);
             else f(layout);
