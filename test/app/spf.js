@@ -260,7 +260,7 @@
                             slot.render();
                             layoutAfter();
                         });
-                        if (!slot.inDom) slot.$el.appendTo(view.$(key));
+                        if (!slot.inDom) slot.$el.appendTo(key == 'this' ? view.el : view.$(key));
                     });
                 });
             });

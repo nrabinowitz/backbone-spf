@@ -402,6 +402,28 @@ casper
             'bar2 slot initialized with attributes');
     });
     
+casper
+    .describe("Views in 'this' slot")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                'foo': {
+                    id: 'new_layout',
+                    slots: {
+                        'this': [ViewOne, '#template_1']
+                    }
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#new_layout', 'foo', 'foo');
+        t.assertText('#new_layout .view_one h2', 'ViewOne',
+            'ViewOne slot initialized');
+        t.assertText('#new_layout .template_1 div.template', 'Template Test',
+            'template_1 slot initialized');
+    });
+    
 casper.run(function() {
     t.done();
 });
