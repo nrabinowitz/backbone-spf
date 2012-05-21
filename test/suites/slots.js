@@ -368,6 +368,39 @@ casper
         t.assertEvalEquals(function() { return $('#bar div.slot1').html() }, '',
             'Slot 1 is empty');
     });
+
+casper
+    .describe("Multiple views per slot")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                foo: {
+                    layout: '#layout_1',
+                    id: 'foo',
+                    slots: {
+                        '#slot_1_1': [
+                            ViewOne, 
+                            '#template_1', 
+                            {
+                                id: 'bar2',
+                                className: 'baz',
+                                layout: '#template_2'
+                            }
+                        ]
+                    }
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo');
+        t.assertText('#slot_1_1 .view_one h2', 'ViewOne',
+            'ViewOne slot initialized');
+        t.assertText('#slot_1_1 .template_1 div.template', 'Template Test',
+            'template_1 slot initialized');
+        t.assertVisible('#slot_1_1 #bar2.baz.template_2',
+            'bar2 slot initialized with attributes');
+    });
     
 casper.run(function() {
     t.done();

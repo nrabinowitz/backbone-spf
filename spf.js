@@ -245,16 +245,20 @@
                     view.layout();
                 });
             _(view.slotConfig).each(function(slotConfig, key) {
-                processViewConfig(slotConfig, view.depth+1, function(slotConfig) {
-                    // instatiate slots
-                    var slot = view.slots[key] = new slotConfig.layout({ 
-                            parent: view
+                // handle arrays
+                ensureArray(slotConfig).forEach(function(slotConfig) {
+                    // process config
+                    processViewConfig(slotConfig, view.depth+1, function(slotConfig) {
+                        // instatiate slots
+                        var slot = view.slots[key] = new slotConfig.layout({ 
+                                parent: view
+                            });
+                        slot.ready(function() {
+                            slot.render();
+                            layoutAfter();
                         });
-                    slot.ready(function() {
-                        slot.render();
-                        layoutAfter();
+                        if (!slot.inDom) slot.$el.appendTo(view.$(key));
                     });
-                    if (!slot.inDom) slot.$el.appendTo(view.$(key));
                 });
             });
         },
@@ -351,7 +355,7 @@
                     processViewConfig(config.views[viewKey], 0, function(viewConfig) {
                         viewClass = viewConfig && viewConfig.layout;
                         if (viewClass) {
-                            // instatiate and add to DOM
+                            // instantiate and add to DOM
                             view = viewCache[viewKey] = new viewClass({ parent: app });
                             view.render();
                             if (!view.inDom) view.$el.appendTo(app.el);
