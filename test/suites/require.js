@@ -108,6 +108,40 @@ casper
             'Nested slot using the ViewOne view');
     });
     
+casper
+    .describe("Require > Asynchrous load order")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                foo: {
+                    id: 'foo',
+                    slots: {
+                        'this': [
+                            {
+                                layout: 'require/view1',
+                                id: 'first_view1'
+                            }, 
+                            'require/view2', 
+                            {
+                                layout: 'require/view1',
+                                id: 'second_view1'
+                            }
+                        ]
+                    }
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#foo', 'foo', 'foo');
+        t.assertVisible('#foo #first_view1:nth-child(1)',
+            'First view loaded in correct order');
+        t.assertVisible('#foo .view_two:nth-child(2)',
+            'Second view loaded in correct order');
+        t.assertVisible('#foo #second_view1:nth-child(3)',
+            'Third view loaded in correct order');
+    });
+    
 casper.run(function() {
     t.done();
 });

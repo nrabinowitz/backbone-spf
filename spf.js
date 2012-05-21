@@ -249,18 +249,30 @@
                 });
             _(view.slotConfig).each(function(slotConfig, key) {
                 // handle arrays
-                ensureArray(slotConfig).forEach(function(slotConfig) {
+                ensureArray(slotConfig).forEach(function(slotConfig, i) {
                     // process config
                     processViewConfig(slotConfig, view.depth+1, function(slotConfig) {
                         // instatiate slots
                         var slot = view.slots[key] = new slotConfig.layout({ 
                                 parent: view
-                            });
+                            }),
+                            $parent, $el, $prev;
                         slot.ready(function() {
                             slot.render();
                             layoutAfter();
                         });
-                        if (!slot.inDom) slot.$el.appendTo(key == 'this' ? view.el : view.$(key));
+                        if (!slot.inDom) {
+                            $el = slot.$el.data('order', i);
+                            $parent = key == 'this' ? view.$el : view.$(key);
+                            var $prev = $parent
+                                .children()
+                                .filter(function() {
+                                    return $(this).data('order') < i
+                                })
+                                .last();
+                            if ($prev[0]) $el.insertAfter($prev); 
+                            else $parent.prepend($el);
+                        }
                     });
                 });
             });
