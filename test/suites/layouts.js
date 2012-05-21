@@ -219,6 +219,25 @@ casper
             'View foo is hidden');
     });
     
+casper
+    .describe("View with no layout or template specified")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                'foo': {
+                    id: 'new_layout',
+                    className: 'layout'
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#new_layout', 'foo', 'foo');
+        t.assertVisible('#new_layout',
+            'Layout is visible');
+        t.assertVisible('#new_layout.layout',
+            'Layout has the correct CSS class');
+    });
     
 casper.run(function() {
     t.done();

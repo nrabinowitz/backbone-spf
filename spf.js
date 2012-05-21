@@ -598,11 +598,14 @@
         checkRequire(function(layout) {
             var slots = viewConfig.slots,
                 attrs = _.clone(viewConfig);
+            // no layout - create empty layout
+            if (!layout) layout = spf.Layout;
             // layout is a string - create view
             if (_.isString(layout))
                 layout = spf.Layout.extend({ 
                     el: layout 
                 });
+            // allow manual slotConfig to override?
             if (!layout.prototype.slotConfig) {
                 // set slots
                 layout = layout.extend({ 
