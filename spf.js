@@ -248,6 +248,7 @@
                     view.layout();
                 });
             _(view.slotConfig).each(function(slotConfig, key) {
+                var order = [];
                 // handle arrays
                 ensureArray(slotConfig).forEach(function(slotConfig, i) {
                     // process config
@@ -262,12 +263,13 @@
                             layoutAfter();
                         });
                         if (!slot.inDom) {
-                            $el = slot.$el.data('order', i);
+                            $el = slot.$el;
+                            order[i] = slot.el;
                             $parent = key == 'this' ? view.$el : view.$(key);
                             var $prev = $parent
                                 .children()
                                 .filter(function() {
-                                    return $(this).data('order') < i
+                                    return order.indexOf(this) < i
                                 })
                                 .last();
                             if ($prev[0]) $el.insertAfter($prev); 
