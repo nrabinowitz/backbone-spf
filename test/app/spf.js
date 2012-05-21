@@ -241,7 +241,10 @@
          */
         updateSlots: function() {
             var view = this,
-                layoutAfter = _.after(_.keys(view.slotConfig).length, function() {
+                slotCount = _.reduce(view.slotConfig, function(count, slotConfig) {
+                    return count + ensureArray(slotConfig).length;
+                }, 0),
+                layoutAfter = _.after(slotCount, function() {
                     view.layout();
                 });
             _(view.slotConfig).each(function(slotConfig, key) {
