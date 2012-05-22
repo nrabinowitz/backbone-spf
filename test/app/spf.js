@@ -245,7 +245,10 @@
                     return count + ensureArray(slotConfig).length;
                 }, 0),
                 layoutAfter = _.after(slotCount, function() {
-                    view.layout();
+                    // appears to be necessary for some view refreshes
+                    setTimeout(function() {
+                        view.layout(); 
+                    }, 0);
                 });
             _(view.slotConfig).each(function(slotConfig, key) {
                 var order = [];
