@@ -253,17 +253,18 @@
                 ensureArray(slotConfig).forEach(function(slotConfig, i) {
                     // process config
                     processViewConfig(slotConfig, view.depth+1, function(slotConfig) {
-                        // instatiate slots
+                        // instantiate slots
                         var slot = view.slots[key] = new slotConfig.layout({ 
                                 parent: view
                             }),
-                            $parent, $el, $prev;
+                            $parent, $prev;
+                        // render, optionally waiting for models to load
                         slot.ready(function() {
                             slot.render();
                             layoutAfter();
                         });
+                        // add to DOM, dealing with async order issues
                         if (!slot.inDom) {
-                            $el = slot.$el;
                             order[i] = slot.el;
                             $parent = key == 'this' ? view.$el : view.$(key);
                             var $prev = $parent
@@ -272,8 +273,8 @@
                                     return order.indexOf(this) < i
                                 })
                                 .last();
-                            if ($prev[0]) $el.insertAfter($prev); 
-                            else $parent.prepend($el);
+                            if ($prev[0]) slot.$el.insertAfter($prev); 
+                            else $parent.prepend(slot.el);
                         }
                     });
                 });
@@ -598,8 +599,6 @@
     
     // recursively process a view configuration object
     function processViewConfig(viewConfig, depth, callback) {
-        // early exit
-        if (viewConfig._processed) callback(viewConfig);
         viewConfig = ensureViewObject(viewConfig);
         function checkRequire(f) {
             var layout = viewConfig.layout;
@@ -640,8 +639,7 @@
             attrs.topLevel = !depth;
             attrs.depth = depth;
             viewConfig.layout = layout.extend(attrs);
-            // avoid calling multiple times
-            viewConfig._processed = 1;
+            // send to callback
             callback(viewConfig);
         });
     }
