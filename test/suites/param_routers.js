@@ -144,6 +144,41 @@ casper
         t.assertAtRoute('#layout_3', 'baz', 'baz/3333/4444');
     });
     
+casper
+    .describe("Parameterized string-based routers > Forward/back in router")
+    .setup('#foo/1/2', function() {
+        spf.configure({
+            views: {
+                foo: {
+                    layout: '#layout_1',
+                    router: ['foo/:param1', 'foo/:param1/:param2']
+                }
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo/1/2');
+        t.assertState('param1', '1');
+        t.assertState('param2', '2');
+    })
+    .thenOpen(baseUrl + '#foo/1', function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo/1');
+        t.assertState('param1', '1');
+        t.assertState('param2', null);
+    })
+    .back()
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo/1/2');
+        t.assertState('param1', '1');
+        t.assertState('param2', '2');
+    })
+    .forward()
+    .then(function() {
+        t.assertAtRoute('#layout_1', 'foo', 'foo/1');
+        t.assertState('param1', '1');
+        t.assertState('param2', null);
+    });
+    
 casper.run(function() {
     t.done();
 });

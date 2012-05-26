@@ -450,15 +450,15 @@
                 stateParams = [],
                 // look for routes in options, or default to view key
                 routeEntries =  router.routeEntries = ensureArray(routeStrings || viewKey)
-                        .map(function(r) {
-                            // get state variables
-                            var params = (r.match(/:\w+/g) || [])
-                                .map(function(s) { return s.substr(1) });
-                            // add to listener list
-                            stateParams = _.union(stateParams, params);
-                            // return entry object
-                            return { route: r, params: params }
-                        });
+                    .map(function(r) {
+                        // get state variables
+                        var params = (r.match(/:\w+/g) || [])
+                            .map(function(s) { return s.substr(1) });
+                        // add to listener list
+                        stateParams = _.union(stateParams, params);
+                        // return entry object
+                        return { route: r, params: params }
+                    });
             // set up routes
             _(routeEntries).each(function(e) {
                 var r = e.route,
@@ -473,6 +473,10 @@
                     // update state parameters
                     params.forEach(function(p) {
                         state.setSerialized(p, args[p]);
+                    });
+                    // null out missing params
+                    _.difference(stateParams, params).forEach(function(p) {
+                        state.unset(p);
                     });
                     // update view
                     state.set({ view: viewKey });
@@ -663,7 +667,7 @@
                 viewConfig.router = k;
             // router is a string or an array - create router with factory
             if (_.isString(viewConfig.router) || _.isArray(viewConfig.router))
-                viewConfig.router = StateRouter.extend({ 
+                viewConfig.router = spf.StateRouter.extend({ 
                     viewKey: k, 
                     routeStrings: viewConfig.router
                 });
