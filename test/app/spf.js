@@ -373,7 +373,8 @@
                     viewKeys.indexOf(oldKey) < viewKeys.indexOf(viewKey) :
                     true;
                 // close old view
-                if (oldView) app.close(oldView, fromRight);
+                if (oldView) app.close(oldView, fromRight, 
+                    config.cacheViews ? $.noop : function() { oldView.clear() });
                 // open new view
                 app.open(view, fromRight);
             }
@@ -403,8 +404,9 @@
             view.$el.show();
         },
         
-        close: function(view, fromRight) {
+        close: function(view, fromRight, callback) {
             view.$el.hide();
+            callback();
         }
     });
     

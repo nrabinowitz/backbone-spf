@@ -239,6 +239,50 @@ casper
             'Layout has the correct CSS class');
     });
     
+casper
+    .describe("Templated layout open and close")
+    .setup('#foo', function() {
+        spf.configure({
+            views: {
+                foo: '#template_1',
+                bar: '#template_2'
+            }
+        }).start();
+    })
+    .then(function() {
+        t.assertAtRoute('.top.template_1', 'foo', 'foo');
+        t.assertNotVisible('.top.template_2',
+            'View bar is hidden');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.state.set({ view: 'bar'}) });
+    })
+    .then(function() {
+        t.assertAtRoute('.top.template_2', 'bar', 'bar');
+        t.assertNotVisible('.top.template_1',
+            'View foo is hidden');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.state.set({ view: 'foo'}) });
+    })
+    .then(function() {
+        t.assertAtRoute('.top.template_1', 'foo', 'foo');
+        t.assertNotVisible('.top.template_2',
+            'View bar is hidden');
+        t.assertEvalEquals(function() { return $('.top.template_1').length }, 1,
+            'Only one view foo element in DOM');
+    })
+    .then(function() {
+        this.evaluate(function() { spf.state.set({ view: 'bar'}) });
+    })
+    .then(function() {
+        t.assertAtRoute('.top.template_2', 'bar', 'bar');
+        t.assertNotVisible('.top.template_1',
+            'View foo is hidden');
+        t.assertEvalEquals(function() { return $('.top.template_2').length }, 1,
+            'Only one view bar element in DOM');
+    });
+
 casper.run(function() {
     t.done();
 });
