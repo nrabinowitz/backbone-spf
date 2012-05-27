@@ -245,7 +245,12 @@ casper
         spf.configure({
             views: {
                 foo: '#template_1',
-                bar: '#template_2'
+                bar: { 
+                    layout: '#template_2',
+                    slots: {
+                        '.slot1': ViewOne
+                    }
+                }
             }
         }).start();
     })
@@ -261,6 +266,8 @@ casper
         t.assertAtRoute('.top.template_2', 'bar', 'bar');
         t.assertNotVisible('.top.template_1',
             'View foo is hidden');
+        t.assertVisible('.template_2 .slot1 h2',
+            'View bar\'s slot is visible');
     })
     .then(function() {
         this.evaluate(function() { spf.state.set({ view: 'foo'}) });
@@ -279,6 +286,8 @@ casper
         t.assertAtRoute('.top.template_2', 'bar', 'bar');
         t.assertNotVisible('.top.template_1',
             'View foo is hidden');
+        t.assertVisible('.template_2 .slot1 h2',
+            'View bar\'s slot is visible');
         t.assertEvalEquals(function() { return $('.top.template_2').length }, 1,
             'Only one view bar element in DOM');
     });
