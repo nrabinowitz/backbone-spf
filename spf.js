@@ -15,7 +15,7 @@
         config = spf.config = {
             appElement: 'body',
             views: {},
-            
+            cacheViews: false
         },
         ensureArray = function(a) {
             return a===undefined ? [] : _.isArray(a) ? a : [a]
@@ -168,6 +168,15 @@
         // passthrough by default
         ready: function(callback) {
             callback();
+        },
+        
+        // decorator: function called only when the view is ready
+        bindReady: function(callback) {
+            var view = this,
+                f = typeof callback == 'function' ? callback :
+                    // otherwise, assume it's a method name on the view
+                    _.bind(view[callback], view);
+            return function() { view.ready(f); };
         }
     });
     
@@ -370,7 +379,7 @@
             }
             if (viewKey !== undefined && viewKey !== oldKey) {
                 // look in cache
-                view = viewCache[viewKey];
+                view = config.cacheViews && viewCache[viewKey];
                 if (!view) {
                     // no cache - get view class from config and instantiate
                     processViewConfig(config.views[viewKey], 0, function(viewConfig) {
