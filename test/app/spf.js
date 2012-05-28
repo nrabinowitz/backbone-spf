@@ -357,7 +357,7 @@
         },
         
         // update the top-level layout
-        updateView: function() {
+        updateView: function(refresh) {
             var app = this,
                 viewKey = state.get('view'),
                 oldKey = state.previous('view'),
@@ -378,7 +378,7 @@
                 // open new view
                 app.open(view, fromRight);
             }
-            if (viewKey !== undefined && viewKey !== oldKey) {
+            if (viewKey !== undefined && (viewKey !== oldKey || refresh)) {
                 // look in cache
                 view = config.cacheViews && viewCache[viewKey];
                 if (!view) {
