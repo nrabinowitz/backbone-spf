@@ -729,6 +729,9 @@
         spf.app = new spf.AppView({
             el: config.appElement
         });
+        // allow Backbone settings to be set via configure()
+        Backbone.emulateHTTP = !!config.emulateHTTP;
+        Backbone.emulateJSON = !!config.emulateJSON;
         // start the router machinery
         Backbone.history.start(options);
     }
